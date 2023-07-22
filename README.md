@@ -28,13 +28,25 @@ potential representative genome.
     
 ## Application Examples
 
-### 1. Dereplication to select a manageable number of genomes:
+### 1. Dereplication to select a manageable number of genomes for a single taxonomic group:
 
-```bash
-skDER.py -g genome_1.gbk genome_2.gbk genome_3.gbk -o skDER_Results/ -c 10
-```
+The primary reason we developed skDER was to select representative genomes to use to construct a database for commonly studied bacteria genera where a lot of redundancy exists in public databases (e.g. ~35k E. coli genomes in GTDB R214) to aid our other software package [zol](https://github.com/Kalan-Lab/zol).
 
 ### 2. Dereplication to select reference genomes for metagenomic alignment/analysis:
+
+A more common usage of dereplication is to select represnetative genomes for metagenomic alignment of reads to avoid partitioning them to multiple similar genomes/MAGs and lose signal or track of species across multiple microbiomes. 
+
+Here we
+
+## Usage Examples:
+
+### 1. Input is a user-provided genome set
+
+```bash
+skDER.py -g Ecoli_genome_1.gbk Ecoli_genome_2.gbk Ecoli_genome_3.gbk -o skDER_Results/ -c 10
+```
+
+### 2. Input is a genus/species ID from GTDB R214:
 
 ```bash
 skDER.py -t "Cutibacterium avidum" -o skDER_Results/ -c 10
