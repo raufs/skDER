@@ -36,7 +36,9 @@ The primary reason we developed skDER was to select representative genomes to us
 
 A more common usage of dereplication is to select represnetative genomes for metagenomic alignment of reads to avoid partitioning them to multiple similar genomes/MAGs and lose signal or track of species across multiple microbiomes. 
 
-Here we
+The most common tool for this purpose is dRep by Olm et al 2019. They employ a greedy approach to first group somewhat simliar genomes into primary clusters using MASH (very fast) and then use other programs to more accurately calculate ANI between genomes in each primary cluster to get a secondary more granular clustering (e.g. FastANI, gANI, etc.). The authors also nicely include other dependencies such as checkM to determine completness and contamination estimates for each genome. 
+
+We think skDER can similarly be used for this application - however - without accounting for contamination (since we don't include checkM as a dependency). 
 
 ## Usage Examples:
 
