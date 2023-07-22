@@ -1,0 +1,13 @@
+name: skDER
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python
+  - pip=22.1.2
+  - conda-forge::cxx-compiler
+  - bioconda::biopython=1.79
+  - bioconda::skani
+  - bioconda::ncbi-genome-download
+  - bioconda::pyfastx
