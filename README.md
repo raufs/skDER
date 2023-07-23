@@ -10,14 +10,14 @@ Also please consider citing the lsaBGC manuscript - where a predecessor version 
 
 [Evolutionary investigations of the biosynthetic diversity in the skin microbiome using lsaBGC](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10210951/)
 
-We are considering writing a JOSS article or prerint if people are interested.
+We are considering writing a JOSS article or prerint if people are interested. We can also integrate other ANI estimates too - if people are interested and welcome code contributions.
 
 ## Overview
 
-This program will perform dereplication of genomes using skani ANI and AF estimates and a dynamic programming based
-approach. It assesses pairwise ANI estimates and chooses which genomes to keep if they are deemed redundant to each 
-other based on assembly N50 (keeping the more contiguous assembly) and connectedness (favoring genomes deemed similar 
-to a greater number of alternate genomes). 
+This program will perform dereplication of genomes using skani average nucleotide identity (ANI) and aligned fraction (AF) 
+estimates and a dynamic programming based approach. It assesses pairwise ANI estimates and chooses which genomes to keep 
+if they are deemed redundant to each other based on assembly N50 (keeping the more contiguous assembly) and connectedness 
+(favoring genomes deemed similar to a greater number of alternate genomes). 
     
 Compared to dRep by Olm et al. 2017 it does not use a greedy approach based on primary clustering using MASH and
 is more so designed for selecting distinct genomes for a taxonomic group for comparative genomics rather than for 
@@ -25,6 +25,18 @@ metagenomic application. However, it can be used for metagenomic application if 
 MAGs which have high levels of contamination, which can be assessed using CheckM for instance, and appropriately
 setting the max alignment fraction difference parameter, for the smaller genome to automatically be disregarded as a 
 potential representative genome.
+
+### Details:
+
+- Download or process input genomes. 
+- Compute and create a tsv linking each genome to their N50 assembly quality metric (_N50_[g]). 
+- Compute ANI and AF using skani triangle to get a tsv "edge listing" between pairs of genomes.
+- Run through "edge listing" tsv on first pass and compute connectivity (_C_[g]) for each genome - how many other genomes it is similar to at a certain threshold.
+- Run through "N50" tsv and store information.
+- Second pass through "edge listing" tsv and assess each pair one at a time keeping track of a singular set of genomes regarded as redudnant:
+    - if (_AF_[g_1] - _AF_[g_2]) >= parameter `max_af_distance_cutoff`, then automatically regard corresponding genome of min(_AF_[g_1], _AF_[g_2]) as redundant.
+    - else calculate the following score for each genome: _N50_[g]*_C_[g] = _S_[g] and regard corresponding genome for min(_S_[g1], _S_[g2]) as redundant.
+- Second pass through "N50" tsv file and record genome identifier if they were never deemed redudant.
     
 ## Application Examples
 
