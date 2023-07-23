@@ -19,7 +19,7 @@ estimates and a dynamic programming based approach. It assesses pairwise ANI est
 if they are deemed redundant to each other based on assembly N50 (keeping the more contiguous assembly) and connectedness 
 (favoring genomes deemed similar to a greater number of alternate genomes). 
     
-Compared to dRep by Olm et al. 2017 it does not use a greedy approach based on primary clustering using MASH and
+Compared to [dRep](https://github.com/MrOlm/drep) by [Olm et al. 2017](https://www.nature.com/articles/ismej2017126) it does not use a greedy approach based on primary clustering using MASH and
 is more so designed for selecting distinct genomes for a taxonomic group for comparative genomics rather than for 
 metagenomic application. However, it can be used for metagenomic application if users are cautious and filter out 
 MAGs which have high levels of contamination, which can be assessed using CheckM for instance, and appropriately
