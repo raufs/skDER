@@ -132,13 +132,13 @@ def skder_main():
 	if taxa_name != "None" and taxa_name != None:
 		# Step 0: parse GTDB information file, get list of Genbank accessions, and perform dry-run with
 		# ncbi-genome-download if requested.
-		gtdb_listing_file = SKREP_DIR + 'GTDB_R214_Information.txt.gz'
+		gtdb_listing_file = SKDER_DIR + 'GTDB_R214_Information.txt.gz'
 
 		if not os.path.isfile(gtdb_listing_file):
 			sys.stdout.write("GTDB listing file not available, using wget to download it.\n")
 			logObject.info("\nGTDB listing file not available, using wget to download it.")
-			wget_cmd = ['wget', 'https://github.com/Kalan-Lab/lsaBGC/raw/develop/db/GTDB_R214_Information.txt.gz', '-P', outdir]
-            gtdb_listing_file = outdir + 'GTDB_R214_Information.txt.gz'
+			wget_cmd = ['wget', 'https://github.com/Kalan-Lab/lsaBGC/raw/main/db/GTDB_R214_Information.txt.gz', '-P', outdir]
+			gtdb_listing_file = outdir + "GTDB_R214_Information.txt.gz"
 			runCmd(wget_cmd, logObject, check_files=[gtdb_listing_file])
 
 		genbank_accession_listing_file = outdir + 'NCBI_Genbank_Accession_Listing.txt'
@@ -194,7 +194,7 @@ def skder_main():
 						runCmd(ngd_real_cmd, logObject, check_directories=[genomes_directory])
 						uncompress_cmds = []
 						for f in os.listdir(genomes_directory):
-							uncompress_cmds.append(['gunzip', genomes_directory + f, logObject])
+							uncompress_cmds.append(['gunzip', genomes_directory + f])#, logObject])
 						p = multiprocessing.Pool(cpus)
 						p.map(multiProcess, uncompress_cmds)
 						p.close()
@@ -251,16 +251,15 @@ def skder_main():
 
 	skder_result_file = outdir + 'skDER_Results.txt'
 	
-    skder_core_prog = skder_dir + 'skDERcore' 
-    if not os.path.isfile(skder_core_prog):
-        skder_core_prog = 'skDERcore'
-    skder_core_cmd = [SKDER_DIR + 'skDERcore', skani_result_file, concat_n50_result_file, str(max_af_distance_cutoff), '>',
-					  skder_result_file ]
+	skder_core_prog = SKDER_DIR + 'skDERcore'
+	if not os.path.isfile(skder_core_prog):
+		skder_core_prog = 'skDERcore'
+	skder_core_cmd = [skder_core_prog, skani_result_file, concat_n50_result_file, str(max_af_distance_cutoff), '>', skder_result_file ]
 	runCmd(skder_core_cmd, logObject, check_files=[skder_result_file])
 
 	# Close logging object and exit
-	logObject.info('******************\nzol finished!\n******************\nFinal results can be found at: %s' % skani_result_file)
-	sys.stdout.write('******************\nzol finished!\n******************\nFinal results can be found at: %s\n' % skani_result_file)
+	logObject.info('******************\nskDER finished!\n******************\nFinal results can be found at: %s' % skani_result_file)
+	sys.stdout.write('******************\nskDER finished!\n******************\nFinal results can be found at: %s\n' % skani_result_file)
 	closeLoggerObject(logObject)
 	sys.exit(0)
 
@@ -357,28 +356,28 @@ def compute_n50(inputs):
 	Uses pyfastx
 	"""
 	input_fasta, output_file = inputs
-	fa = pyfastx.Fasta(input_fasta, build_index=False)
+	fa = pyfastx.Fasta(input_fasta, build_index=True)
 	n50, _ = fa.nl(50)
 	output_handle = open(output_file, 'w')
 	output_handle.write(input_fasta + '\t' + str(n50) + '\n')
 	output_handle.close()
 
-def multiProcess(input):
+def multiProcess(inputs):
 	"""
 	Genralizable function to be used with multiprocessing to parallelize list of commands. Inputs should correspond
 	to space separated command (as list), with last item in list corresponding to a logging object handle for logging
 	progress.
 	"""
-	input_cmd = input[:-1]
-	logObject = input[-1]
-	logObject.info('Running the following command: %s' % ' '.join(input_cmd))
+	input_cmd = inputs
+	#logObject = inputs[-1]
+	#logObject.info('Running the following command: %s' % ' '.join(input_cmd))
 	try:
 		subprocess.call(' '.join(input_cmd), shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
 						executable='/bin/bash')
-		logObject.info('Successfully ran: %s' % ' '.join(input_cmd))
+		#logObject.info('Successfully ran: %s' % ' '.join(input_cmd))
 	except Exception as e:
-		logObject.warning('Had an issue running: %s' % ' '.join(input_cmd))
-		logObject.warning(traceback.format_exc())
+		#logObject.warning('Had an issue running: %s' % ' '.join(input_cmd))
+		#logObject.warning(traceback.format_exc())
 		sys.stderr.write(traceback.format_exc())
 
 if __name__ == '__main__':
