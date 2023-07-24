@@ -104,13 +104,13 @@ One approach to selecting representative genomes might be to construct a phyloge
 
 We performed a quick comparison of dRep with skDER using similar parameters. dRep was run using FastANI as the secondary clustering method with a secondary ANI cutoff of 99%. skDER was run using an ANI cutoff of 99%, an alignment fraction similarity cutoff of 90%, and a maximum alignment fraction difference cutoff of 10%. 
 
-From the input of 5,291 _Enterococcus_ genomes, dRep selected 463 representatives (taking ~266 minutes with 30 cpus) and skDER selected 436 reprsentatives (taking ~80 minutes with 30 cpus). **The dereplication step following skani ANI computation ran in less than a minute.**
+From the input of 5,291 _Enterococcus_ genomes from GTDB R207, dRep selected 463 representatives (taking ~266 minutes with 30 cpus) and skDER selected 436 reprsentatives (taking ~80 minutes with 30 cpus). **The dereplication step following skani ANI computation ran in less than a minute.**
 
 The distribution of N50s for the representative genomes were roughly similar between the two dereplication approaches:
 
 ![dRep_vs_skREP_N50_Stats](https://github.com/raufs/skDER/assets/4260723/1e804e06-c835-4338-b444-2068b8e3ed1e)
 
-Additionally, both methods selected a representative genome for each of the 92 species belonging to Enterococcus or Enterococcus-like genera in GTDB:
+Additionally, both methods selected a representative genome for each of the 92 species belonging to _Enterococcus_ or _Enterococcus_-like genera in GTDB R207:
 
 ![Species_Representative_Counts](https://github.com/raufs/skDER/assets/4260723/ac5008cc-dd38-4201-8346-9eb2398b0887)
 
