@@ -5,9 +5,9 @@ channels:
   - defaults
 dependencies:
   - python
-  - pip=22.1.2
+  - pip
   - conda-forge::cxx-compiler
-  - bioconda::biopython=1.79
+  - bioconda::biopython
   - bioconda::skani
   - bioconda::ncbi-genome-download
   - bioconda::pyfastx
