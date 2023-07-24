@@ -19,12 +19,12 @@ estimates and a dynamic programming based approach. It assesses pairwise ANI est
 if they are deemed redundant to each other based on assembly N50 (keeping the more contiguous assembly) and connectedness 
 (favoring genomes deemed similar to a greater number of alternate genomes). 
     
-Compared to [dRep](https://github.com/MrOlm/drep) by [Olm et al. 2017](https://www.nature.com/articles/ismej2017126) it does not use a greedy approach based on primary clustering using MASH and
-is more so designed for selecting distinct genomes for a taxonomic group for comparative genomics rather than for 
-metagenomic application. However, it can be used for metagenomic application if users are cautious and filter out 
-MAGs which have high levels of contamination, which can be assessed using CheckM for instance, and appropriately
-setting the max alignment fraction difference parameter, for the smaller genome to automatically be disregarded as a 
-potential representative genome.
+Compared to [dRep](https://github.com/MrOlm/drep) by [Olm et al. 2017](https://www.nature.com/articles/ismej2017126) 
+it does not use a greedy approach based on primary clustering using MASH and is more so designed for selecting distinct
+genomes for a taxonomic group for comparative genomics rather than for metagenomic application. However, it can be used 
+for metagenomic application if users are cautious and filter out MAGs which have high levels of contamination, which can 
+be assessed using CheckM for instance, and appropriately setting the max alignment fraction difference parameter, for the 
+smaller genome to automatically be disregarded as a potential representative genome.
 
 ### Details:
 
@@ -87,6 +87,18 @@ conda activate skDER_env
 python setup.py install
 pip install -e .
 ```
+
+## Alternative Approaches to Consider
+
+If dereplication based on ANI thresholds is not needed these alternate approaches might also be of interest to you:
+
+#### 1. Phylogenetic construction and pruning while retaining diversity using Treemer or something like it.
+
+One approach to selecting representative genomes might be to construct a phylogenetic/phylogenomic tree for all the genomes and then prune samples while maximizing retention of diversity. [Treemmer](https://bmcbioinformatics.biomedcentral.com/articles/10.1186/s12859-018-2164-8) is a really nice program for performing this.
+
+#### 2. Intra-species identification of strains using PopPunk 
+
+[PopPunk](https://genome.cshlp.org/content/early/2019/01/16/gr.241455.118) might also be of interest to users interested in clustering genomes within a species into strain clusters, after which they can select representatives based on N50 or other metrics. PopPunk's infrastructure is well designed for scalability.
 
 ## LICENSE
 
