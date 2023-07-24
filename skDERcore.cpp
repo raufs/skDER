@@ -1,6 +1,6 @@
 /*
 AUTHOR - Rauf Salamzade
-DATE - 12/24/22
+DATE - 07/23/2023
 PROGRAM NAME - skDERcore.cpp
 DESCRIPTION - Core program of skDER to dereplicate genomes.
 */
