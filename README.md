@@ -114,6 +114,60 @@ Additionally, both methods selected a representative genome for each of the 92 s
 
 ![Species_Representative_Counts](https://github.com/raufs/skDER/assets/4260723/ac5008cc-dd38-4201-8346-9eb2398b0887)
 
+## Usage
+
+```
+usage: skDER.py [-h] [-g GENOMES [GENOMES ...]] [-t TAXA_NAME] -o
+                OUTPUT_DIRECTORY [-i PERCENT_IDENTITY_CUTOFF]
+                [-f ALIGNED_FRACTION_CUTOFF] [-m MAX_AF_DISTANCE_CUTOFF]
+                [-p SKANI_TRIANGLE_PARAMETERS] [-c CPUS]
+
+	Program: skder.py
+	Author: Rauf Salamzade
+	Affiliation: Kalan Lab, UW Madison, Department of Medical Microbiology and Immunology
+
+	This program will perform dereplication of genomes using skani ANI and AF estimates and a dynamic programming based
+	approach. It assesses pairwise ANI estimates and chooses which genomes to keep if they are deemed redundant to each 
+	other based on assembly N50 (keeping the more contiguous assembly) and connectedness (favoring genomes deemed similar 
+	to a greater number of alternate genomes). 
+	
+	Compared to dRep by Olm et al. 2017 it does not use a greedy approach based on primary clustering using MASH and
+	is more so designed for selecting distinct genomes for a taxonomic group for comparative genomics rather than for 
+	metagenomic application. However, it can be used for metagenomic application if users are cautious and filter out 
+	MAGs which have high levels of contamination, which can be assessed using CheckM for instance, and appropriately
+	setting the max alignment fraction difference parameter, for the smaller genome to automatically be disregarded as a 
+	potential representative genome.
+	
+	If you find the program useful please cite:
+	- "Fast and robust metagenomic sequence comparison through sparse chaining with skani" by Shaw & Yu 
+	     - https://www.biorxiv.org/content/10.1101/2023.01.18.524587v2 
+	- "Evolutionary investigations of the biosynthetic diversity in the skin microbiome using lsaBGC" by Salamzade et al. 2023
+	     - https://www.microbiologyresearch.org/content/journal/mgen/10.1099/mgen.0.000988#tab2
+	     - This paper introduced a more cursory and less optimized version of the dynamic dereplication process.
+	     	
+	
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -g GENOMES [GENOMES ...], --genomes GENOMES [GENOMES ...]
+                        Genome assembly files in FASTA format (each file should end with either *.fasta, *.fa, or *.fna) [Optional].
+  -t TAXA_NAME, --taxa_name TAXA_NAME
+                        Genus or species identifier from GTDB (currently R214) for which to download genomes for [Optional].
+  -o OUTPUT_DIRECTORY, --output_directory OUTPUT_DIRECTORY
+                        Output directory.
+  -i PERCENT_IDENTITY_CUTOFF, --percent_identity_cutoff PERCENT_IDENTITY_CUTOFF
+                        ANI cutoff for dereplication [Default is 99.0].
+  -f ALIGNED_FRACTION_CUTOFF, --aligned_fraction_cutoff ALIGNED_FRACTION_CUTOFF
+                        Aligned cutoff threshold for dereplication - only needed by one genome [Default is 90.0].
+  -m MAX_AF_DISTANCE_CUTOFF, --max_af_distance_cutoff MAX_AF_DISTANCE_CUTOFF
+                        Maximum difference for aligned fraction between a pair to automatically disqualify the genome with a higher AF from being a representative.
+  -p SKANI_TRIANGLE_PARAMETERS, --skani_triangle_parameters SKANI_TRIANGLE_PARAMETERS
+                        Options for skani triangle. Note ANI and AF cutoffs
+                        are specified separately and the -E parameter is always
+                        requested. [Default is ""].
+  -c CPUS, --cpus CPUS  Number of CPUs to use.
+```
+
 ## LICENSE
 
 ```
