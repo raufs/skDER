@@ -5,7 +5,7 @@ from setuptools import setup
 setup(name='skDER',
       version='1.00',
       description='Dynamic dereplication of microbial genomes.',
-      url='http://github.com/raufs/ddrep/',
+      url='http://github.com/raufs/skDER/',
       author='Rauf Salamzade',
       author_email='salamzader@gmail.com',
       license='BSD-3',
