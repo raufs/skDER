@@ -108,11 +108,11 @@ From the input of 5,291 _Enterococcus_ genomes from GTDB R207, dRep selected 463
 
 The distribution of N50s for the representative genomes were roughly similar between the two dereplication approaches:
 
-![dRep_vs_skREP_N50_Stats](https://github.com/raufs/skDER/assets/4260723/1e804e06-c835-4338-b444-2068b8e3ed1e)
+![](https://github.com/raufs/skDER/blob/main/dRep_vs_skREP_N50_Stats.png)
 
 Additionally, both methods selected a representative genome for each of the 92 species belonging to _Enterococcus_ or _Enterococcus_-like genera in GTDB R207:
 
-![Species_Representative_Counts](https://github.com/raufs/skDER/assets/4260723/ac5008cc-dd38-4201-8346-9eb2398b0887)
+![](https://github.com/raufs/skDER/blob/main/Species_Representative_Counts.png)
 
 ## Usage
 
