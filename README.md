@@ -114,6 +114,12 @@ Additionally, both methods selected a representative genome for each of the 92 s
 
 ![](https://github.com/raufs/skDER/blob/main/Species_Representative_Counts.png)
 
+And we can see the ANI between representative genomes is roughly the same, though skDER leads to fewer representatives chosen from the _E. faecalis_ species:
+
+![Heatmaps](https://github.com/raufs/skDER/assets/4260723/af3343ae-4bf8-4a45-acf5-779153f84d5c)
+
+Minor note, 1 representative is not shown in the heatmap for skDER because the ordering of the heatmap was determined through GToTree phylogenomics and this genome was excluded to allow for a better core genome alignment.
+
 ## Usage
 
 ```
