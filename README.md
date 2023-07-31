@@ -70,7 +70,14 @@ skDER.py -t "Cutibacterium avidum" -o skDER_Results/ -c 10
 
 ### Bioconda
 
-coming soon!
+Note, (for some setups at least) ***it is critical to specify the conda-forge channel before the bioconda channel to properly configure priority and lead to a successful installation.***
+ 
+**Recommended**: For a significantly faster installation process, use `mamba` in place of `conda` in the below commands, by installing `mamba` in your base conda environment.
+
+```bash
+conda create -n skder_env -c conda-forge -c bioconda skder
+conda activate skder_env
+```
 
 ### Conda Manual
 
