@@ -37,6 +37,7 @@
 
 import os
 import sys
+import shutil
 from time import sleep
 import argparse
 import gzip
@@ -59,25 +60,13 @@ def create_parser():
 	Author: Rauf Salamzade
 	Affiliation: Kalan Lab, UW Madison, Department of Medical Microbiology and Immunology
 
-	This program will perform dereplication of genomes using skani ANI and AF estimates and a dynamic programming based
-	approach. It assesses pairwise ANI estimates and chooses which genomes to keep if they are deemed redundant to each 
-	other based on assembly N50 (keeping the more contiguous assembly) and connectedness (favoring genomes deemed similar 
-	to a greater number of alternate genomes). 
-	
-	Compared to dRep by Olm et al. 2017 it does not use a greedy approach based on primary clustering using MASH and
-	is more so designed for selecting distinct genomes for a taxonomic group for comparative genomics rather than for 
-	metagenomic application. However, it can be used for metagenomic application if users are cautious and filter out 
-	MAGs which have high levels of contamination, which can be assessed using CheckM for instance, and appropriately
-	setting the max alignment fraction difference parameter, for the smaller genome to automatically be disregarded as a 
-	potential representative genome.
-	
-	If you find the program useful please cite:
-	- "Fast and robust metagenomic sequence comparison through sparse chaining with skani" by Shaw & Yu 
-	     - https://www.biorxiv.org/content/10.1101/2023.01.18.524587v2 
-	- "Evolutionary investigations of the biosynthetic diversity in the skin microbiome using lsaBGC" by Salamzade et al. 2023
-	     - https://www.microbiologyresearch.org/content/journal/mgen/10.1099/mgen.0.000988#tab2
-	     - This paper introduced a more cursory and less optimized version of the dynamic dereplication process.
-	     	
+	skDER: efficient dynamic & high-resolution dereplication of microbial genomes to select representative genomes.
+
+	skDER relies heavily on advances made by skani for fast ANI estimation while retaining accuracy - thus if you use skDER for your research it is essential to cite skani:
+	- "Fast and robust metagenomic sequence comparison through sparse chaining with skani"
+
+	Also please consider citing the lsaBGC manuscript - where a predecessor version of the dynamic dereplication stratedgy employed by skder was first described:
+	- "Evolutionary investigations of the biosynthetic diversity in the skin microbiome using lsaBGC"
 	""", formatter_class=argparse.RawTextHelpFormatter)
 
 	parser.add_argument('-g', '--genomes', nargs='+', help='Genome assembly files in FASTA format (each file should end with either *.fasta, *.fa, or *.fna) [Optional].', required=False, default=[])
@@ -88,6 +77,7 @@ def create_parser():
 	parser.add_argument('-m', '--max_af_distance_cutoff', type=float, help="Maximum difference for aligned fraction between a pair to automatically disqualify the genome with a higher AF from being a representative.", required=False, default=10.0)
 	parser.add_argument('-p', '--skani_triangle_parameters', help="Options for skani triangle. Note ANI and AF cutoffs\nare specified separately and the -E parameter is always\nrequested. [Default is \"\"].", default="", required=False)
 	parser.add_argument('-c', '--cpus', type=int, help="Number of CPUs to use.", required=False, default=1)
+	parser.add_argument('-v', '--version', action='store_true', help="Report version of skDER.", required=False, default=False)	
 	args = parser.parse_args()
 	return args
 
@@ -105,6 +95,11 @@ def skder_main():
 	skani_triangle_parameters = myargs.skani_triangle_parameters
 	max_af_distance_cutoff = myargs.max_af_distance_cutoff
 	cpus = myargs.cpus
+	version_flag = myargs.version
+
+	if version_flag:
+		sys.stderr.write('Version of skDER.py being used is: ' + str(version) + '\n')
+		sys.exit(0)
 
 	if os.path.isdir(outdir):
 		sys.stderr.write("Output directory already exists! Overwriting in 5 seconds, but only where needed will use checkpoint files to skip certain steps...\n")
@@ -257,9 +252,23 @@ def skder_main():
 	skder_core_cmd = [skder_core_prog, skani_result_file, concat_n50_result_file, str(max_af_distance_cutoff), '>', skder_result_file ]
 	runCmd(skder_core_cmd, logObject, check_files=[skder_result_file])
 
-	# Close logging object and exit
-	logObject.info('******************\nskDER finished!\n******************\nFinal results can be found at: %s' % skani_result_file)
-	sys.stdout.write('******************\nskDER finished!\n******************\nFinal results can be found at: %s\n' % skani_result_file)
+	# copy over genomes which are non-redundant to a separate directory
+	skani_drep_dir = outdir + 'Dereplicated_Representative_Genomes/'	
+	if not os.path.isdir(skani_drep_dir):
+		setupDirectories([skani_drep_dir])
+
+	with open(skder_result_file) as osrf:
+		for line in osrf:
+			genome_path = line.strip()
+			try:
+				shutil.copy2(genome_path, skani_drep_dir)
+			except:
+				sys.stderr.write('Warning: issues copying over representative genome %s to final dereplicated sub-directory.\n' % genome_path)
+				logObject.warning('Issues copying over representative genome %s to final dereplicated sub-directory.' % genome_path)
+				
+	# close logging object and exit
+	logObject.info('******************\nskDER finished!\n******************\nDirectory with dereplicated genomes can be found at: %s' % skani_drep_dir)
+	sys.stdout.write('******************\nskDER finished!\n******************\nDirectory with dereplicated genomes can be found at: %s\n' % skani_drep_dir)
 	closeLoggerObject(logObject)
 	sys.exit(0)
 
@@ -369,15 +378,10 @@ def multiProcess(inputs):
 	progress.
 	"""
 	input_cmd = inputs
-	#logObject = inputs[-1]
-	#logObject.info('Running the following command: %s' % ' '.join(input_cmd))
 	try:
 		subprocess.call(' '.join(input_cmd), shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
 						executable='/bin/bash')
-		#logObject.info('Successfully ran: %s' % ' '.join(input_cmd))
 	except Exception as e:
-		#logObject.warning('Had an issue running: %s' % ' '.join(input_cmd))
-		#logObject.warning(traceback.format_exc())
 		sys.stderr.write(traceback.format_exc())
 
 if __name__ == '__main__':

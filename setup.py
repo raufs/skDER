@@ -3,7 +3,7 @@ import sys
 from setuptools import setup
 
 setup(name='skDER',
-      version='1.00',
+      version='1.0.1',
       description='Dynamic dereplication of microbial genomes.',
       url='http://github.com/raufs/skDER/',
       author='Rauf Salamzade',
