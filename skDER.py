@@ -35,6 +35,10 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+# setup is not adherent to pep recommendation for using toml at the moment - might update later
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 import os
 import sys
 import shutil
