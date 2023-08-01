@@ -183,7 +183,7 @@ optional arguments:
 
 ## Acknowledgments
 
-We thank Titus Brown, Tess Pierce-Ward, and Karthik Anantharamn for helpful discussions on the development of skDER.
+We thank Titus Brown, Tessa Pierce-Ward, and Karthik Anantharamn for helpful discussions on the development of skDER.
 
 ## LICENSE
 
