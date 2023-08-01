@@ -181,6 +181,10 @@ optional arguments:
   -c CPUS, --cpus CPUS  Number of CPUs to use.
 ```
 
+## Acknowledgments
+
+We thank Titus Brown, Tess Pierce-Ward, and Karthik Anantharamn for helpful discussions on the development of skDER.
+
 ## LICENSE
 
 ```
