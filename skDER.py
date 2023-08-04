@@ -7,7 +7,7 @@
 
 # BSD 3-Clause License
 #
-# Copyright (c) 2023, Kalan-Lab
+# Copyright (c) 2023, Rauf Salamzade
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -80,8 +80,9 @@ def create_parser():
 	parser.add_argument('-f', '--aligned_fraction_cutoff', type=float, help="Aligned cutoff threshold for dereplication - only needed by one genome [Default is 90.0].", required=False, default=90.0)
 	parser.add_argument('-m', '--max_af_distance_cutoff', type=float, help="Maximum difference for aligned fraction between a pair to automatically disqualify the genome with a higher AF from being a representative.", required=False, default=10.0)
 	parser.add_argument('-p', '--skani_triangle_parameters', help="Options for skani triangle. Note ANI and AF cutoffs\nare specified separately and the -E parameter is always\nrequested. [Default is \"\"].", default="", required=False)
+	parser.add_argument('-l', '--symlink', action='store_true', help="Symlink representative genomes in results subdirectory instead of performing a copy of the files.", required=False, default=False)
 	parser.add_argument('-c', '--cpus', type=int, help="Number of CPUs to use.", required=False, default=1)
-	parser.add_argument('-v', '--version', action='store_true', help="Report version of skDER.", required=False, default=False)	
+	parser.add_argument('-v', '--version', action='store_true', help="Report version of skDER.", required=False, default=False)
 	args = parser.parse_args()
 	return args
 
@@ -99,6 +100,7 @@ def skder_main():
 	skani_triangle_parameters = myargs.skani_triangle_parameters
 	max_af_distance_cutoff = myargs.max_af_distance_cutoff
 	cpus = myargs.cpus
+	symlink_flag = myargs.symlink
 	version_flag = myargs.version
 
 	if version_flag:
@@ -265,7 +267,11 @@ def skder_main():
 		for line in osrf:
 			genome_path = line.strip()
 			try:
-				shutil.copy2(genome_path, skani_drep_dir)
+				if symlink_flag:
+					os.symlink(genome_path, skani_drep_dir)
+				else:
+					shutil.copy2(genome_path, skani_drep_dir)
+				
 			except:
 				sys.stderr.write('Warning: issues copying over representative genome %s to final dereplicated sub-directory.\n' % genome_path)
 				logObject.warning('Issues copying over representative genome %s to final dereplicated sub-directory.' % genome_path)
