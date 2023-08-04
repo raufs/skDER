@@ -268,7 +268,8 @@ def skder_main():
 			genome_path = line.strip()
 			try:
 				if symlink_flag:
-					os.symlink(genome_path, skani_drep_dir)
+					symlink_file = skani_drep_dir + genome_path.split('/')[-1]
+					os.symlink(genome_path, symlink_file)
 				else:
 					shutil.copy2(genome_path, skani_drep_dir)
 				
