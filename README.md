@@ -2,7 +2,7 @@
 
 skDER: efficient dynamic & high-resolution dereplication of microbial genomes to select representative genomes. 
 
-skDER relies heavily on advances made by **skani** for fast ANI estimation while retaining accuracy - thus if you use skDER for your research **it is essential to cite skani**:
+skDER relies heavily on advances made by **skani** for fast ANI estimation while retaining accuracy - thus if you use skDER for your research it is essential to cite skani:
 
 [Fast and robust metagenomic sequence comparison through sparse chaining with skani](https://www.biorxiv.org/content/10.1101/2023.01.18.524587v2)
 
