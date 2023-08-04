@@ -134,35 +134,24 @@ Minor note, 1 representative is not shown in the heatmap for skDER because the o
 ## Usage
 
 ```
+
 usage: skDER.py [-h] [-g GENOMES [GENOMES ...]] [-t TAXA_NAME] -o
                 OUTPUT_DIRECTORY [-i PERCENT_IDENTITY_CUTOFF]
                 [-f ALIGNED_FRACTION_CUTOFF] [-m MAX_AF_DISTANCE_CUTOFF]
-                [-p SKANI_TRIANGLE_PARAMETERS] [-c CPUS]
+                [-p SKANI_TRIANGLE_PARAMETERS] [-l] [-c CPUS] [-v]
 
-	Program: skder.py
-	Author: Rauf Salamzade
-	Affiliation: Kalan Lab, UW Madison, Department of Medical Microbiology and Immunology
+        Program: skder.py
+        Author: Rauf Salamzade
+        Affiliation: Kalan Lab, UW Madison, Department of Medical Microbiology and Immunology
 
-	This program will perform dereplication of genomes using skani ANI and AF estimates and a dynamic programming based
-	approach. It assesses pairwise ANI estimates and chooses which genomes to keep if they are deemed redundant to each 
-	other based on assembly N50 (keeping the more contiguous assembly) and connectedness (favoring genomes deemed similar 
-	to a greater number of alternate genomes). 
-	
-	Compared to dRep by Olm et al. 2017 it does not use a greedy approach based on primary clustering using MASH and
-	is more so designed for selecting distinct genomes for a taxonomic group for comparative genomics rather than for 
-	metagenomic application. However, it can be used for metagenomic application if users are cautious and filter out 
-	MAGs which have high levels of contamination, which can be assessed using CheckM for instance, and appropriately
-	setting the max alignment fraction difference parameter, for the smaller genome to automatically be disregarded as a 
-	potential representative genome.
-	
-	If you find the program useful please cite:
-	- "Fast and robust metagenomic sequence comparison through sparse chaining with skani" by Shaw & Yu 
-	     - https://www.biorxiv.org/content/10.1101/2023.01.18.524587v2 
-	- "Evolutionary investigations of the biosynthetic diversity in the skin microbiome using lsaBGC" by Salamzade et al. 2023
-	     - https://www.microbiologyresearch.org/content/journal/mgen/10.1099/mgen.0.000988#tab2
-	     - This paper introduced a more cursory and less optimized version of the dynamic dereplication process.
-	     	
-	
+        skDER: efficient dynamic & high-resolution dereplication of microbial genomes to select representative genomes.
+
+        skDER relies heavily on advances made by skani for fast ANI estimation while retaining accuracy - thus if you use skDER for your research it is essential to cite skani:
+        - "Fast and robust metagenomic sequence comparison through sparse chaining with skani"
+
+        Also please consider citing the lsaBGC manuscript - where a predecessor version of the dynamic dereplication stratedgy employed by skder was first described:
+        - "Evolutionary investigations of the biosynthetic diversity in the skin microbiome using lsaBGC"
+
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -182,7 +171,9 @@ optional arguments:
                         Options for skani triangle. Note ANI and AF cutoffs
                         are specified separately and the -E parameter is always
                         requested. [Default is ""].
+  -l, --symlink         Symlink representative genomes in results subdirectory instead of performing a copy of the files.
   -c CPUS, --cpus CPUS  Number of CPUs to use.
+  -v, --version         Report version of skDER.
 ```
 
 ## Acknowledgments
