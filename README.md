@@ -115,26 +115,31 @@ One approach to selecting representative genomes might be to construct a phyloge
 
 We performed a quick comparison of dRep with skDER using similar parameters. dRep was run using FastANI as the secondary clustering method with a secondary ANI cutoff of 99%. skDER was run using an ANI cutoff of 99%, an alignment fraction similarity cutoff of 90%, and a maximum alignment fraction difference cutoff of 10%. 
 
+![](![image](https://github.com/raufs/skDER/assets/4260723/7cec4712-758d-4c19-9f87-28da6adf4a3a)
+
 From the input of 5,291 _Enterococcus_ genomes from GTDB R207, dRep selected 463 representatives (taking ~266 minutes with 30 cpus) and skDER selected 436 reprsentatives (taking ~80 minutes with 30 cpus). **The dereplication step following skani ANI computation ran in less than a minute.**
 
 The distribution of N50s for the representative genomes were roughly similar between the two dereplication approaches:
 
 ![](https://github.com/raufs/skDER/blob/main/dRep_vs_skREP_N50_Stats.png)
 
+We can see the ANI between representative genomes is roughly the same, though skDER leads to fewer representatives chosen from the _E. faecalis_ species:
+
+![](https://github.com/raufs/skDER/blob/main/Heatmaps.png)
+
+Minor note, 1 representative is not shown in the heatmap for skDER because the ordering of each heatmap was determined through GToTree phylogenomics and this genome was excluded to allow for a better core genome alignment.
+
 Additionally, both methods selected a representative genome for each of the 92 species belonging to _Enterococcus_ or _Enterococcus_-like genera in GTDB R207:
 
 ![](https://github.com/raufs/skDER/blob/main/Species_Representative_Counts.png)
 
-And we can see the ANI between representative genomes is roughly the same, though skDER leads to fewer representatives chosen from the _E. faecalis_ species:
+Once more, because the number of representative _E. faecalis_ genomes was a major difference between the two methods (dRep = 101, skDER = 63), we assessed how many more unique genes or ortholog groups were found for the two sets of representative genomes for the species. Across the set of 101 representative genomes by dRep, 9396 distinct genes were identified. skDER achieved a similar saturation of the _E. faecalis_ pangenome, 8803 distinct genes identified, with only 63 representative genomes selected.
 
-![Heatmaps](https://github.com/raufs/skDER/assets/4260723/af3343ae-4bf8-4a45-acf5-779153f84d5c)
-
-Minor note, 1 representative is not shown in the heatmap for skDER because the ordering of the heatmap was determined through GToTree phylogenomics and this genome was excluded to allow for a better core genome alignment.
+![](https://github.com/raufs/skDER/blob/main/Panaroo_GeneAccumulationCurve.PNG)
 
 ## Usage
 
 ```
-
 usage: skDER.py [-h] [-g GENOMES [GENOMES ...]] [-t TAXA_NAME] -o
                 OUTPUT_DIRECTORY [-i PERCENT_IDENTITY_CUTOFF]
                 [-f ALIGNED_FRACTION_CUTOFF] [-m MAX_AF_DISTANCE_CUTOFF]
