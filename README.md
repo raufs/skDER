@@ -2,15 +2,19 @@
 
 skDER: efficient dynamic & high-resolution dereplication of microbial genomes to select representative genomes. 
 
-skDER relies heavily on advances made by **skani** for fast ANI estimation while retaining accuracy - thus if you use skDER for your research it is essential to cite skani:
+skDER relies heavily on advances made by **skani** for fast ANI estimation while retaining accuracy - thus if you use skDER for your research **it is essential to cite skani**:
 
 [Fast and robust metagenomic sequence comparison through sparse chaining with skani](https://www.biorxiv.org/content/10.1101/2023.01.18.524587v2)
 
-Also please consider citing the lsaBGC manuscript - where a predecessor version of the dynamic dereplication stratedgy employed by skder was first described:
+If you use the option to downlod genomes for a taxonomy based on GTDB classifications, please also cite:
 
-[Evolutionary investigations of the biosynthetic diversity in the skin microbiome using lsaBGC](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10210951/)
+[GTDB: an ongoing census of bacterial and archaeal diversity through a phylogenetically consistent, rank normalized and complete genome-based taxonomy](https://academic.oup.com/nar/article/50/D1/D785/6370255)
 
-We are considering writing a JOSS article or prerint if people are interested. We can also integrate other ANI estimates too - if people are interested and welcome code contributions.
+Please consider citing the lsaBGC manuscript - where a predecessor of the dynamic dereplication stratedgy employed by skder was first described:
+
+[Evolutionary investigations of the biosynthetic diversity in the skin microbiome using lsaBGC](https://www.microbiologyresearch.org/content/journal/mgen/10.1099/mgen.0.000988)
+
+We are considering writing a JOSS article for the dynamic dereplication method but details on the algorithm for now can be found below in this README.
 
 ## Overview
 
