@@ -1,5 +1,10 @@
 # skDER
 
+[![Anaconda-Server Badge](https://anaconda.org/bioconda/skder/badges/version.svg)](https://anaconda.org/bioconda/skder)
+[![Anaconda-Server Badge](https://anaconda.org/bioconda/skder/badges/platforms.svg)](https://anaconda.org/bioconda/skder)
+[![Anaconda-Server Badge](https://anaconda.org/bioconda/skder/badges/latest_release_date.svg)](https://anaconda.org/bioconda/skder)
+[![Anaconda-Server Badge](https://anaconda.org/bioconda/skder/badges/downloads.svg)](https://anaconda.org/bioconda/skder)
+
 skDER: efficient dynamic & high-resolution dereplication of microbial genomes to select representative genomes. 
 
 skDER relies heavily on advances made by **skani** for fast ANI estimation while retaining accuracy - thus if you use skDER for your research it is essential to cite skani:
@@ -52,7 +57,7 @@ The primary reason we developed skDER was to select representative genomes to us
 
 A more common usage of dereplication is to select represnetative genomes for metagenomic alignment of reads to avoid partitioning them to multiple similar genomes/MAGs and lose signal or track of species across multiple microbiomes. 
 
-The most common tool for this purpose is [dRep](https://github.com/MrOlm/drep) by [Olm et al 2019](https://www.nature.com/articles/ismej2017126). They employ a greedy approach to first group somewhat simliar genomes into primary clusters using MASH (very fast) and then use other programs to more accurately calculate ANI between genomes in each primary cluster to get a secondary more granular clustering (e.g. FastANI, gANI, etc.). The authors also nicely include other dependencies such as checkM to determine completness and contamination estimates for each genome. 
+The most common tool for this purpose is [dRep](https://github.com/MrOlm/drep) by [Olm et al 2017](https://www.nature.com/articles/ismej2017126). They employ a greedy approach to first group somewhat simliar genomes into primary clusters using MASH (very fast) and then use other programs to more accurately calculate ANI between genomes in each primary cluster to get a secondary more granular clustering (e.g. FastANI, gANI, etc.). The authors also nicely include other dependencies such as checkM to determine completness and contamination estimates for each genome. 
 
 We think skDER can similarly be used for this application - however - without accounting for contamination (since we don't include checkM as a dependency). For completeness however, users can specify an adjustable parameter for the difference in alignment fraction calculated for pairs of genomes that are X% ANI similar to one another. If the alignment fraction difference exceeds this parameter (default: 10% - e.g. 90% AF for one genome, 75% AF for the other) - then we automatically determine the genome with the higher AF value as redundant (e.g. the genome with the 90% AF). However, this approach can be severely impacted if dealing with MAGs which are contaminated so it might be good to filter out such MAGs in advance perhaps using checkM.
 
@@ -183,7 +188,7 @@ optional arguments:
 
 ## Acknowledgments
 
-We thank Titus Brown, Tessa Pierce-Ward, and Karthik Anantharamn for helpful discussions on the development of skDER.
+We thank Titus Brown, Tessa Pierce-Ward, and Karthik Anantharaman for helpful discussions on the development of skDER.
 
 ## LICENSE
 
