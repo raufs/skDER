@@ -87,6 +87,10 @@ def create_parser():
 	return args
 
 def skder_main():
+	if len(sys.argv)>1 and ('-v' in set(sys.argv) or '--version' in set(sys.argv)):
+		sys.stderr.write('Version of skDER.py being used is: ' + str(version) + '\n')
+		sys.exit(0)
+	
 	# Parse arguments
 	myargs = create_parser()
 
@@ -102,10 +106,6 @@ def skder_main():
 	cpus = myargs.cpus
 	symlink_flag = myargs.symlink
 	version_flag = myargs.version
-
-	if version_flag:
-		sys.stderr.write('Version of skDER.py being used is: ' + str(version) + '\n')
-		sys.exit(0)
 
 	if os.path.isdir(outdir):
 		sys.stderr.write("Output directory already exists! Overwriting in 5 seconds, but only where needed will use checkpoint files to skip certain steps...\n")
