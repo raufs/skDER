@@ -246,7 +246,7 @@ def skder_main():
 	# run skani triangle
 	skani_result_file = outdir + 'Skani_Triangle_Edge_Output.txt'
 	skani_triangle_cmd = ['skani', 'triangle', '-l', all_genomes_listing_file, '-s', str(percent_identity_cutoff),
-			      '--min-af', str(aligned_fraction_cutoff), '-E', skani_triangle_parameters,
+			      '--min-af', str(aligned_fraction_cutoff), '-E', skani_triangle_parameters, '-t', str(cpus),
 			      '-o', skani_result_file]
 	runCmd(skani_triangle_cmd, logObject, check_files=[skani_result_file])
 
