@@ -116,7 +116,7 @@ bash ./run_tests.sh
 
 ## Usage
 
-```
+```bash
 # the skder executable should be in the path after installation and can be reference as such:
 skder -h
 ```
