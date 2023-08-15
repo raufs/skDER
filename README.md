@@ -7,7 +7,9 @@
 
 skDER: efficient dynamic & high-resolution dereplication of microbial genomes to select representatives for comparative genomics and metagenomics. 
 
-Contents
+<img src="https://raw.githubusercontent.com/raufs/skDER/main/images/Logo.png" alt="drawing" width="300"/>
+
+**Content**
 
 1. [Installation](#installation)
 2. [Overview](#overview)
@@ -15,11 +17,10 @@ Contents
 4. [Application examples & commands](https://github.com/raufs/skDER/wiki/Application-Examples-&-Commands)
 5. [Alternative approaches and comparisons](https://github.com/raufs/skDER/wiki/Alternate-Approaches-and-Comparisons)
 6. [Test case](#test-case)
-7. [Usage]()
-7. Pre-computed representative genomes for 13 bacterial genera
-8. Citation notice
+7. [Usage](#usage)
+8. [Citation notice](#citation-notice)
 
-***Note, version 1.0.1 and earlier versions, had an overflow-related bug that resulted in inaccurate scoring - this was resolved in version 1.0.2.***
+***Note, version 1.0.1 and earlier versions, had an overflow-related bug that resulted in inaccurate dereplication - this was resolved in version 1.0.2.***
 
 ## Installation
 
@@ -54,29 +55,64 @@ pip install -e .
 
 This program will perform dereplication of genomes using skani average nucleotide identity (ANI) and aligned fraction (AF) estimates and a dynamic programming based approach. It assesses pairwise ANI estimates and chooses which genomes to keep if they are deemed redundant to each other based on assembly N50 (keeping the more contiguous assembly) and connectedness (favoring genomes deemed similar to a greater number of alternate genomes). 
     
-Compared to [dRep](https://github.com/MrOlm/drep) by [Olm et al. 2017](https://www.nature.com/articles/ismej2017126) and [galah](https://github.com/wwood/galah), skDER does not use a divide-and-conquer approach based on primary clustering with MASH or dashing followed by greedy clustering of more precise ANI estimates (for instance computed using FastANI) in a secondary round. It leverages advances in accurate yet speedy ANI calculations by skani to simply do one round of clustering and is primarily designed for selecting distinct genomes for a taxonomic group for comparative genomics rather than for metagenomic application. 
+Compared to [dRep](https://github.com/MrOlm/drep) by [Olm et al. 2017](https://www.nature.com/articles/ismej2017126) and [galah](https://github.com/wwood/galah), skDER does not use a divide-and-conquer approach based on primary clustering with MASH or dashing followed by greedy clustering of more precise ANI estimates (for instance computed using FastANI) in a secondary round. It leverages advances in accurate yet speedy ANI calculations by [skani](https://github.com/bluenote-1577/skani) by [Shaw and Yu](https://www.biorxiv.org/content/10.1101/2023.01.18.524587v2) to simply do one round of clustering and is primarily designed for selecting distinct genomes for a taxonomic group for comparative genomics rather than for metagenomic application. 
 
 It can still be used for metagenomic application if users are cautious and filter out MAGs which have high levels of contamination, which can be assessed using CheckM for instance. To support this application and in particular the realization that most MAGs likely suffer from incompleteness, we have introduced a parameter/cutoff for the max alignment fraction  difference for each pair of genomes. For example, if the AF for genome 1 to genome 2 is 95% (95% of genome 1 is contained in  genome 2) and the AF for genome 2 to genome 1 is 80%, then the difference is 15%. Because the default value for the difference cutoff is 10%, in that example the genome with the larger value will automatically be regarded as redundant and become disqualified as a potential representative genome.
 
+skDER features two distinct algorithms for dereplication (details can be found below):
+
+- **dynamic approach:** approximates selection of a single representative genome per transitive cluster - results in a concise listing of representative genomes.
+- **greedy approach:** performs selection based on greedy set cover type approach. 
+
 ## Details on Dereplication Algorithms
+
+### Using Dynamic Programming Dereplication Approach
 
 Unlike dRep and gallah, which implement greedy approaches for selecting representative genomes, the default dereplication method in skDER approximates selection of a single representative for coarser clusters of geneomes using a dynamic programming approach in which a set of genomes deemed as redundant is kept track of, avoiding the need to actually cluster genomes. 
 
 Here is an overview of the typical workflow for skDER:
 
-- Download or process input genomes. 
-- Compute and create a tsv linking each genome to their N50 assembly quality metric (_N50_[g]). 
-- Compute ANI and AF using skani triangle to get a tsv "edge listing" between pairs of genomes.
-- Run through "edge listing" tsv on first pass and compute connectivity (_C_[g]) for each genome - how many other genomes it is similar to at a certain threshold.
-- Run through "N50" tsv and store information.
-- Second pass through "edge listing" tsv and assess each pair one at a time keeping track of a singular set of genomes regarded as redudnant:
-    - if (_AF_[g_1] - _AF_[g_2]) >= parameter `max_af_distance_cutoff`, then automatically regard corresponding genome of max(_AF_[g_1], _AF_[g_2]) as redundant.
-    - else calculate the following score for each genome: _N50_[g]*_C_[g] = _S_[g] and regard corresponding genome for min(_S_[g1], _S_[g2]) as redundant.
-- Second pass through "N50" tsv file and record genome identifier if they were never deemed redudant.
+>- Download or process input genomes. 
+>- Compute and create a tsv linking each genome to their N50 assembly quality metric (_N50_[g]). 
+>- Compute ANI and AF using skani triangle to get a tsv "edge listing" between pairs of genomes.
+>- Run through "edge listing" tsv on first pass and compute connectivity (_C_[g]) for each genome - how many other genomes it is similar to at a certain threshold.
+>- Run through "N50" tsv and store information.
+>- Second pass through "edge listing" tsv and assess each pair one at a time keeping track of a singular set of genomes regarded as redudnant:
+>    - if (_AF_[g_1] - _AF_[g_2]) >= parameter `--max_af_distance_cutoff` (default of 10%), then automatically regard corresponding genome of max(_AF_[g_1], _AF_[g_2]) as redundant.
+>    - else calculate the following score for each genome: _N50_[g]*_C_[g] = _S_[g] and regard corresponding genome for min(_S_[g1], _S_[g2]) as redundant.
+>- Second pass through "N50" tsv file and record genome identifier if they were never deemed redudant.
     
-### Using Greedy Clustering Instead 
+### Using Greedy Dereplication Approach 
 
 Starting from v1.0.2, skDER also allows users to request greedy clustering instead. This generally leads to a larger, more-comprehensive selection of representative genomes that covers more of the pan-genome.  
+
+Here is an overview of this alternate approach:
+
+>- Download or process input genomes. 
+>- Compute and create a tsv linking each genome to their N50 assembly quality metric (_N50_[g]). 
+>- Compute ANI and AF using skani triangle to get a tsv "edge listing" between pairs of genomes.
+>- Run through "edge listing" tsv on first pass and compute connectivity (_C_[g]) for each genome - how many other genomes it is similar to at a certain threshold 
+>     - Only consider a genome as connected to a focal genome if they share an ANI greater than the `--percent_identity_cutoff` (default of 99%) and the comparing genome exhibits an AF greater than the `--aligned_fraction_cutoff` (default of 90%) to the focal genome (is sufficiently representative of both the core and auxiliary content of the focal genome).
+>- Run through "N50" tsv and compute the score for each genome: _N50_[g]*_C_[g] = _S_[g] and write to new tsv where each line corresponds to a single genome, the second column corresponds to the S[g] computed, and the third column to connected genomes to the focal genome. 
+>- Sort resulting tsv file based on _S_[g] in descending order and use a greedy approach to select representative genomes if they have not been accounted for as a connected genome from an already selected representative genome with a higher score.
+
+
+## Test Case
+
+We provide a simple test case to dereplicate the six genomes available for _Cutibacterium granulosum_ in GTDB release 214 using skDER, together with expected results. 
+
+To run this test case:
+
+```bash
+# Download test data
+wget https://github.com/raufs/skDER/raw/main/test_case.tar.gz
+
+# Download bash script to run skder
+wget https://raw.githubusercontent.com/raufs/skDER/main/run_tests.sh
+
+# Run the wrapper script to perform testing
+bash ./run_tests.sh
+```
 
 ## Usage
 
