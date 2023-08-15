@@ -2,7 +2,7 @@ from setuptools import setup
 import os
 
 setup(name='skDER',
-      version='1.0.3',
+      version='1.0.4',
       description='Program to select distinct representatives from an input set of microbial genomes.',
       url='http://github.com/raufs/skDER/',
       author='Rauf Salamzade',
