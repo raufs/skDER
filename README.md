@@ -5,6 +5,8 @@
 [![Anaconda-Server Badge](https://anaconda.org/bioconda/skder/badges/latest_release_date.svg)](https://anaconda.org/bioconda/skder)
 [![Anaconda-Server Badge](https://anaconda.org/bioconda/skder/badges/downloads.svg)](https://anaconda.org/bioconda/skder)
 
+## OVERFLOW RELATED ISSUE IDENTIFIED - WILL BE RESOLVED IN NEXT VERSION SHORTLY!
+
 skDER: efficient dynamic & high-resolution dereplication of microbial genomes to select representative genomes. 
 
 skDER relies heavily on advances made by **skani** for fast ANI estimation while retaining accuracy - thus if you use skDER for your research it is essential to cite skani:
