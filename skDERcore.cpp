@@ -42,7 +42,7 @@ vector<string> split (string s, string delimiter) {
 int main (int argc, char* argv[]) {
     if ( argv[1]==NULL || (argv[1][0]=='-' && argv[1][1]=='h') || (argv[1][0]=='-' && argv[1][1]=='-' && argv[1][2]=='h') ) {
 	    cout << "Usage:" << endl;
-	    cout << "skDERCore <skani triangle edge listing file> <n50 listing file> <max AF difference for disqualification>" << endl;
+	    cout << "skDERcore <skani triangle edge listing file> <n50 listing file> <max AF difference for disqualification>" << endl;
 	    return 0;
     }
     else {
@@ -93,7 +93,7 @@ int main (int argc, char* argv[]) {
         */
         map<string, int> n50_dictionary;
         int n50_val;
-	string sample;
+	    string sample;
         input_file.open (argv[2]);
         if (input_file.is_open()) {
             while (input_file.good()) {
@@ -155,8 +155,8 @@ int main (int argc, char* argv[]) {
                             redundancy_set.insert(subject);
                         }
                     } else {
-                        query_score = n50_dictionary[query]*connectivity_dictionary[query];
-                        subject_score = n50_dictionary[subject]*connectivity_dictionary[subject];
+                        query_score = (double)n50_dictionary[query]*(double)connectivity_dictionary[query];
+                        subject_score = (double)n50_dictionary[subject]*(double)connectivity_dictionary[subject];
                         if (query_score >= subject_score) {
                             redundancy_set.insert(subject);
                         } else {

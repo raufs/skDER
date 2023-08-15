@@ -5,77 +5,21 @@
 [![Anaconda-Server Badge](https://anaconda.org/bioconda/skder/badges/latest_release_date.svg)](https://anaconda.org/bioconda/skder)
 [![Anaconda-Server Badge](https://anaconda.org/bioconda/skder/badges/downloads.svg)](https://anaconda.org/bioconda/skder)
 
-## OVERFLOW RELATED ISSUE IDENTIFIED - WILL BE RESOLVED IN NEXT VERSION SHORTLY!
+skDER: efficient dynamic & high-resolution dereplication of microbial genomes to select representatives for comparative genomics and metagenomics. 
 
-skDER: efficient dynamic & high-resolution dereplication of microbial genomes to select representative genomes. 
+Contents
 
-skDER relies heavily on advances made by **skani** for fast ANI estimation while retaining accuracy - thus if you use skDER for your research it is essential to cite skani:
+1. [Installation](#installation)
+2. [Overview](#overview)
+3. [Algorithmic Details](#details-on-dereplication-algorithms)
+4. [Application examples & commands](https://github.com/raufs/skDER/wiki/Application-Examples-&-Commands)
+5. [Alternative approaches and comparisons](https://github.com/raufs/skDER/wiki/Alternate-Approaches-and-Comparisons)
+6. [Test case](#test-case)
+7. [Usage]()
+7. Pre-computed representative genomes for 13 bacterial genera
+8. Citation notice
 
-[Fast and robust metagenomic sequence comparison through sparse chaining with skani](https://www.biorxiv.org/content/10.1101/2023.01.18.524587v2)
-
-If you use the option to downlod genomes for a taxonomy based on GTDB classifications, please also cite:
-
-[GTDB: an ongoing census of bacterial and archaeal diversity through a phylogenetically consistent, rank normalized and complete genome-based taxonomy](https://academic.oup.com/nar/article/50/D1/D785/6370255)
-
-Please consider citing the lsaBGC manuscript - where a predecessor of the dynamic dereplication stratedgy employed by skder was first described:
-
-[Evolutionary investigations of the biosynthetic diversity in the skin microbiome using lsaBGC](https://www.microbiologyresearch.org/content/journal/mgen/10.1099/mgen.0.000988)
-
-We are considering writing a JOSS article for the dynamic dereplication method but details on the algorithm for now can be found below in this README.
-
-## Overview
-
-This program will perform dereplication of genomes using skani average nucleotide identity (ANI) and aligned fraction (AF) 
-estimates and a dynamic programming based approach. It assesses pairwise ANI estimates and chooses which genomes to keep 
-if they are deemed redundant to each other based on assembly N50 (keeping the more contiguous assembly) and connectedness 
-(favoring genomes deemed similar to a greater number of alternate genomes). 
-    
-Compared to [dRep](https://github.com/MrOlm/drep) by [Olm et al. 2017](https://www.nature.com/articles/ismej2017126) 
-it does not use a divide-and-conquer approach based on primary clustering using MASH and greedy clustering and is more 
-so designed for selecting distinct genomes for a taxonomic group for comparative genomics rather than for metagenomic
-application. However, it can be used for metagenomic application if users are cautious and filter out MAGs which have 
-high levels of contamination, which can be assessed using CheckM for instance, and appropriately setting the max alignment 
-fraction difference parameter, for the smaller genome to automatically be disregarded as a potential representative genome.
-
-### Details on Dynamic Dereplication to Approximate Selection of a Single Representative per Transitive Cluster (without actually clustering!):
-
-- Download or process input genomes. 
-- Compute and create a tsv linking each genome to their N50 assembly quality metric (_N50_[g]). 
-- Compute ANI and AF using skani triangle to get a tsv "edge listing" between pairs of genomes.
-- Run through "edge listing" tsv on first pass and compute connectivity (_C_[g]) for each genome - how many other genomes it is similar to at a certain threshold.
-- Run through "N50" tsv and store information.
-- Second pass through "edge listing" tsv and assess each pair one at a time keeping track of a singular set of genomes regarded as redudnant:
-    - if (_AF_[g_1] - _AF_[g_2]) >= parameter `max_af_distance_cutoff`, then automatically regard corresponding genome of max(_AF_[g_1], _AF_[g_2]) as redundant.
-    - else calculate the following score for each genome: _N50_[g]*_C_[g] = _S_[g] and regard corresponding genome for min(_S_[g1], _S_[g2]) as redundant.
-- Second pass through "N50" tsv file and record genome identifier if they were never deemed redudant.
-    
-## Application Examples
-
-### 1. Dereplication to select a manageable number of genomes for a single taxonomic group:
-
-The primary reason we developed skDER was to select representative genomes to use to construct a database for commonly studied bacteria genera where a lot of redundancy exists in public databases (e.g. ~35k E. coli genomes in GTDB R214) to aid our other software package [zol](https://github.com/Kalan-Lab/zol).
-
-### 2. Dereplication to select reference genomes for metagenomic alignment/analysis:
-
-A more common usage of dereplication is to select represnetative genomes for metagenomic alignment of reads to avoid partitioning them to multiple similar genomes/MAGs and lose signal or track of species across multiple microbiomes. 
-
-The most common tool for this purpose is [dRep](https://github.com/MrOlm/drep) by [Olm et al 2017](https://www.nature.com/articles/ismej2017126). They employ a greedy approach to first group somewhat simliar genomes into primary clusters using MASH (very fast) and then use other programs to more accurately calculate ANI between genomes in each primary cluster to get a secondary more granular clustering (e.g. FastANI, gANI, etc.). The authors also nicely include other dependencies such as checkM to determine completness and contamination estimates for each genome. 
-
-We think skDER can similarly be used for this application - however - without accounting for contamination (since we don't include checkM as a dependency). For completeness however, users can specify an adjustable parameter for the difference in alignment fraction calculated for pairs of genomes that are X% ANI similar to one another. If the alignment fraction difference exceeds this parameter (default: 10% - e.g. 90% AF for one genome, 75% AF for the other) - then we automatically determine the genome with the higher AF value as redundant (e.g. the genome with the 90% AF). However, this approach can be severely impacted if dealing with MAGs which are contaminated so it might be good to filter out such MAGs in advance perhaps using checkM.
-
-## Usage Examples:
-
-### 1. Input is a user-provided genome set
-
-```bash
-skDER.py -g Ecoli_genome_1.gbk Ecoli_genome_2.gbk Ecoli_genome_3.gbk -o skDER_Results/ -c 10
-```
-
-### 2. Input is a genus/species ID from GTDB R214:
-
-```bash
-skDER.py -t "Cutibacterium avidum" -o skDER_Results/ -c 10
-```
+***Note, version 1.0.1 and earlier versions, had an overflow-related bug that resulted in inaccurate scoring - this was resolved in version 1.0.2.***
 
 ## Installation
 
@@ -106,53 +50,43 @@ python setup.py install
 pip install -e .
 ```
 
-## Alternative Approaches to Consider
+## Overview
 
-If dereplication based on ANI thresholds is not needed these alternate approaches might also be of interest to you:
+This program will perform dereplication of genomes using skani average nucleotide identity (ANI) and aligned fraction (AF) estimates and a dynamic programming based approach. It assesses pairwise ANI estimates and chooses which genomes to keep if they are deemed redundant to each other based on assembly N50 (keeping the more contiguous assembly) and connectedness (favoring genomes deemed similar to a greater number of alternate genomes). 
+    
+Compared to [dRep](https://github.com/MrOlm/drep) by [Olm et al. 2017](https://www.nature.com/articles/ismej2017126) and [galah](https://github.com/wwood/galah), skDER does not use a divide-and-conquer approach based on primary clustering with MASH or dashing followed by greedy clustering of more precise ANI estimates (for instance computed using FastANI) in a secondary round. It leverages advances in accurate yet speedy ANI calculations by skani to simply do one round of clustering and is primarily designed for selecting distinct genomes for a taxonomic group for comparative genomics rather than for metagenomic application. 
 
-#### 1. Phylogenetic construction and pruning while retaining diversity using Treemer or something like it.
+It can still be used for metagenomic application if users are cautious and filter out MAGs which have high levels of contamination, which can be assessed using CheckM for instance. To support this application and in particular the realization that most MAGs likely suffer from incompleteness, we have introduced a parameter/cutoff for the max alignment fraction  difference for each pair of genomes. For example, if the AF for genome 1 to genome 2 is 95% (95% of genome 1 is contained in  genome 2) and the AF for genome 2 to genome 1 is 80%, then the difference is 15%. Because the default value for the difference cutoff is 10%, in that example the genome with the larger value will automatically be regarded as redundant and become disqualified as a potential representative genome.
 
-One approach to selecting representative genomes might be to construct a phylogenetic/phylogenomic tree for all the genomes and then prune samples while maximizing retention of diversity. [Treemmer](https://bmcbioinformatics.biomedcentral.com/articles/10.1186/s12859-018-2164-8) is a really nice program for performing this.
+## Details on Dereplication Algorithms
 
-#### 2. Intra-species identification of strains using PopPunk 
+Unlike dRep and gallah, which implement greedy approaches for selecting representative genomes, the default dereplication method in skDER approximates selection of a single representative for coarser clusters of geneomes using a dynamic programming approach in which a set of genomes deemed as redundant is kept track of, avoiding the need to actually cluster genomes. 
 
-[PopPunk](https://genome.cshlp.org/content/early/2019/01/16/gr.241455.118) might also be of interest to users interested in clustering genomes within a species into strain clusters, after which they can select representatives based on N50 or other metrics. PopPunk's infrastructure is well designed for scalability.
+Here is an overview of the typical workflow for skDER:
 
-## Comparison to dRep for collapsing redundancy of _Enterococcus_ genomes
+- Download or process input genomes. 
+- Compute and create a tsv linking each genome to their N50 assembly quality metric (_N50_[g]). 
+- Compute ANI and AF using skani triangle to get a tsv "edge listing" between pairs of genomes.
+- Run through "edge listing" tsv on first pass and compute connectivity (_C_[g]) for each genome - how many other genomes it is similar to at a certain threshold.
+- Run through "N50" tsv and store information.
+- Second pass through "edge listing" tsv and assess each pair one at a time keeping track of a singular set of genomes regarded as redudnant:
+    - if (_AF_[g_1] - _AF_[g_2]) >= parameter `max_af_distance_cutoff`, then automatically regard corresponding genome of max(_AF_[g_1], _AF_[g_2]) as redundant.
+    - else calculate the following score for each genome: _N50_[g]*_C_[g] = _S_[g] and regard corresponding genome for min(_S_[g1], _S_[g2]) as redundant.
+- Second pass through "N50" tsv file and record genome identifier if they were never deemed redudant.
+    
+### Using Greedy Clustering Instead 
 
-We performed a quick comparison of dRep with skDER using similar parameters. dRep was run using FastANI as the secondary clustering method with a secondary ANI cutoff of 99%. skDER was run using an ANI cutoff of 99%, an alignment fraction similarity cutoff of 90%, and a maximum alignment fraction difference cutoff of 10%. 
-
-![](https://github.com/raufs/skDER/blob/main/Overview.PNG)
-
-From the input of 5,291 _Enterococcus_ genomes from GTDB R207, dRep selected 463 representatives (taking ~266 minutes with 30 cpus) and skDER selected 436 reprsentatives (taking ~80 minutes with 30 cpus). **The dereplication step following skani ANI computation ran in less than a minute.**
-
-The distribution of N50s for the representative genomes were roughly similar between the two dereplication approaches:
-
-![](https://github.com/raufs/skDER/blob/main/dRep_vs_skREP_N50_Stats.png)
-
-We can see the ANI between representative genomes is roughly the same, though skDER leads to fewer representatives chosen from the _E. faecalis_ species:
-
-![](https://github.com/raufs/skDER/blob/main/Heatmaps.png)
-
-Minor note, 1 representative is not shown in the heatmap for skDER because the ordering of each heatmap was determined through GToTree phylogenomics and this genome was excluded to allow for a better core genome alignment.
-
-Additionally, both methods selected a representative genome for each of the 92 species belonging to _Enterococcus_ or _Enterococcus_-like genera in GTDB R207:
-
-![](https://github.com/raufs/skDER/blob/main/Species_Representative_Counts.png)
-
-Once more, because the number of representative _E. faecalis_ genomes was a major difference between the two methods (dRep = 101, skDER = 63), we assessed how many more unique genes or ortholog groups were found for the two sets of representative genomes for the species. Across the set of 101 representative genomes by dRep, 9396 distinct genes were identified. skDER achieved a similar saturation of the _E. faecalis_ pangenome, 8803 distinct genes identified, with only 63 representative genomes selected.
-
-![](https://github.com/raufs/skDER/blob/main/Panaroo_GeneAccumulationCurve.PNG)
+Starting from v1.0.2, skDER also allows users to request greedy clustering instead. This generally leads to a larger, more-comprehensive selection of representative genomes that covers more of the pan-genome.  
 
 ## Usage
 
 ```
-usage: skDER.py [-h] [-g GENOMES [GENOMES ...]] [-t TAXA_NAME] -o
-                OUTPUT_DIRECTORY [-i PERCENT_IDENTITY_CUTOFF]
-                [-f ALIGNED_FRACTION_CUTOFF] [-m MAX_AF_DISTANCE_CUTOFF]
-                [-p SKANI_TRIANGLE_PARAMETERS] [-l] [-c CPUS] [-v]
+usage: skder [-h] [-g GENOMES [GENOMES ...]] [-t TAXA_NAME] -o
+             OUTPUT_DIRECTORY [-m SELECTION_MODE] [-i PERCENT_IDENTITY_CUTOFF]
+             [-f ALIGNED_FRACTION_CUTOFF] [-d MAX_AF_DISTANCE_CUTOFF]
+             [-p SKANI_TRIANGLE_PARAMETERS] [-l] [-c CPUS] [-v]
 
-        Program: skder.py
+        Program: skDER.py
         Author: Rauf Salamzade
         Affiliation: Kalan Lab, UW Madison, Department of Medical Microbiology and Immunology
 
@@ -173,11 +107,13 @@ optional arguments:
                         Genus or species identifier from GTDB (currently R214) for which to download genomes for [Optional].
   -o OUTPUT_DIRECTORY, --output_directory OUTPUT_DIRECTORY
                         Output directory.
+  -m SELECTION_MODE, --selection_mode SELECTION_MODE
+                        Whether to use a "dynamic" (more concise) or "greedy" (more comprehensive) approach to selecting representative genomes. [Default is "dynamic"]
   -i PERCENT_IDENTITY_CUTOFF, --percent_identity_cutoff PERCENT_IDENTITY_CUTOFF
                         ANI cutoff for dereplication [Default is 99.0].
   -f ALIGNED_FRACTION_CUTOFF, --aligned_fraction_cutoff ALIGNED_FRACTION_CUTOFF
                         Aligned cutoff threshold for dereplication - only needed by one genome [Default is 90.0].
-  -m MAX_AF_DISTANCE_CUTOFF, --max_af_distance_cutoff MAX_AF_DISTANCE_CUTOFF
+  -d MAX_AF_DISTANCE_CUTOFF, --max_af_distance_cutoff MAX_AF_DISTANCE_CUTOFF
                         Maximum difference for aligned fraction between a pair to automatically disqualify the genome with a higher AF from being a representative.
   -p SKANI_TRIANGLE_PARAMETERS, --skani_triangle_parameters SKANI_TRIANGLE_PARAMETERS
                         Options for skani triangle. Note ANI and AF cutoffs
@@ -187,6 +123,22 @@ optional arguments:
   -c CPUS, --cpus CPUS  Number of CPUs to use.
   -v, --version         Report version of skDER.
 ```
+
+## Citation notice
+
+skDER relies heavily on advances made by **skani** for fast ANI estimation while retaining accuracy - thus if you use skDER for your research it is essential to cite skani:
+
+[Fast and robust metagenomic sequence comparison through sparse chaining with skani](https://www.biorxiv.org/content/10.1101/2023.01.18.524587v2)
+
+If you use the option to downlod genomes for a taxonomy based on GTDB classifications, please also cite:
+
+[GTDB: an ongoing census of bacterial and archaeal diversity through a phylogenetically consistent, rank normalized and complete genome-based taxonomy](https://academic.oup.com/nar/article/50/D1/D785/6370255)
+
+Please consider citing the lsaBGC manuscript - where a predecessor of the dynamic dereplication stratedgy employed by skder was first described:
+
+[Evolutionary investigations of the biosynthetic diversity in the skin microbiome using lsaBGC](https://www.microbiologyresearch.org/content/journal/mgen/10.1099/mgen.0.000988)
+
+Details on the dynamic clustering algorithm for now can be found below in this README.
 
 ## Acknowledgments
 
