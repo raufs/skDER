@@ -117,6 +117,12 @@ bash ./run_tests.sh
 ## Usage
 
 ```
+# the skder executable should be in the path after installation and can be reference as such:
+skder -h
+```
+
+The help function should return the following
+```
 usage: skder [-h] [-g GENOMES [GENOMES ...]] [-t TAXA_NAME] -o
              OUTPUT_DIRECTORY [-m SELECTION_MODE] [-i PERCENT_IDENTITY_CUTOFF]
              [-f ALIGNED_FRACTION_CUTOFF] [-d MAX_AF_DISTANCE_CUTOFF]
