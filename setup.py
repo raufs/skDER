@@ -7,5 +7,7 @@ if __name__ == "__main__":
     try:
         os.system("g++ -o skDERsum skDERsum.cpp")
         os.system("g++ -o skDERcore skDERcore.cpp")
+        os.system("mv skDERsum $CONDA_PREFIX/bin/")
+        os.system("mv skDERcore $CONDA_PREFIX/bin/")
     except:
-        print('C++ compilation failed')
+        print('C++ compilation or setup of executables failed')
