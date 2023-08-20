@@ -1,0 +1,8 @@
+cff-version: 1.2.0
+authors:
+- family-names: "Salamzade"
+  given-names: "Rauf"
+  orcid: "https://orcid.org/0000-0002-1923-5948"
+title: "skDER"
+date-released: 2023-08-20
+url: "https://github.com/Kalan-Lab/zol"

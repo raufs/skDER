@@ -4,10 +4,11 @@ channels:
   - bioconda
   - defaults
 dependencies:
-  - python>=3
+  - "python=3.10"
+  - setuptools
   - pip
   - conda-forge::cxx-compiler
-  - bioconda::biopython
+  - "biopython>=1.7"
   - bioconda::skani
   - bioconda::ncbi-genome-download
   - bioconda::pyfastx

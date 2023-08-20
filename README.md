@@ -46,8 +46,7 @@ cd skDER/
 conda env create -f skDER_env.yml -n skDER_env
 conda activate skDER_env
 
-# 3. complete python installation with the following commands:
-python setup.py install
+# 3. complete python installation with the following command:
 pip install -e .
 ```
 
