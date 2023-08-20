@@ -53,7 +53,6 @@ import pkg_resources
 from Bio import SeqIO
 import multiprocessing
 
-SKDER_DIR = '/'.join(os.path.abspath(__file__).split('/')[:-1]) + '/'
 version = pkg_resources.require("skDER")[0].version
 
 def create_parser():
@@ -261,17 +260,13 @@ def skder_main():
 	
 	if selection_mode == 'dynamic':
 		# perform representative selection using dynamic method (default)
-		skder_core_prog = SKDER_DIR + 'skDERcore'
-		if not os.path.isfile(skder_core_prog):
-			skder_core_prog = 'skDERcore'
+		skder_core_prog = 'skDERcore'
 		skder_core_cmd = [skder_core_prog, skani_result_file, concat_n50_result_file, str(max_af_distance_cutoff), '>', skder_result_file]
 		util.runCmd(skder_core_cmd, logObject, check_files=[skder_result_file])
 
 	elif selection_mode == 'greedy':
 		# perform representative selection using greedy method
-		skder_sum_prog = SKDER_DIR + 'skDERsum'
-		if not os.path.isfile(skder_sum_prog):
-			skder_sum_prog = 'skDERsum'
+		skder_sum_prog = 'skDERsum'
 		genome_summary_file = outdir + 'Genome_Information_for_Greedy_Clustering.txt'
 		skder_sum_cmd = [skder_sum_prog, skani_result_file, concat_n50_result_file, str(aligned_fraction_cutoff), '>', genome_summary_file]
 		util.runCmd(skder_sum_cmd, logObject, check_files=[genome_summary_file])
