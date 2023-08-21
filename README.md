@@ -7,9 +7,7 @@
 
 skDER: efficient dynamic & high-resolution dereplication of microbial genomes to select representatives for comparative genomics and metagenomics. 
 
-<img src="https://raw.githubusercontent.com/raufs/skDER/main/images/Logo.png" alt="drawing" width="300"/>
-
-**Content**
+**Contents**
 
 1. [Installation](#installation)
 2. [Overview](#overview)
@@ -19,6 +17,9 @@ skDER: efficient dynamic & high-resolution dereplication of microbial genomes to
 6. [Test case](#test-case)
 7. [Usage](#usage)
 8. [Citation notice](#citation-notice)
+9. [Representative genomes for 17 bacterial taxa from GTDB R214](https://zenodo.org/record/8267523)
+    
+<img src="https://raw.githubusercontent.com/raufs/skDER/main/images/Logo.png" alt="drawing" width="300"/>
 
 ***Note, version 1.0.1 and earlier versions, had an overflow-related bug that resulted in inaccurate dereplication - this was resolved in version 1.0.2.***
 
