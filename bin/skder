@@ -35,7 +35,6 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-# setup is not adherent to pep recommendation for using toml at the moment - might update later
 import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
@@ -87,7 +86,7 @@ def create_parser():
 
 def skder_main():
 	if len(sys.argv)>1 and ('-v' in set(sys.argv) or '--version' in set(sys.argv)):
-		sys.stderr.write('Version of skDER.py being used is: ' + str(version) + '\n')
+		sys.stderr.write('Version of skDER being used is: ' + str(version) + '\n')
 		sys.exit(0)
 	
 	# Parse arguments
