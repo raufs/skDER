@@ -5,7 +5,7 @@
 [![Anaconda-Server Badge](https://anaconda.org/bioconda/skder/badges/latest_release_date.svg)](https://anaconda.org/bioconda/skder)
 [![Anaconda-Server Badge](https://anaconda.org/bioconda/skder/badges/downloads.svg)](https://anaconda.org/bioconda/skder)
 
-skDER: efficient dynamic & high-resolution dereplication of microbial genomes to select representatives for comparative genomics and metagenomics. 
+skDER: efficient & high-resolution dereplication of microbial genomes to select representatives for comparative genomics and metagenomics. 
 
 **Contents**
 
@@ -53,22 +53,22 @@ pip install -e .
 
 ## Overview
 
-This program will perform dereplication of genomes using skani average nucleotide identity (ANI) and aligned fraction (AF) estimates and a dynamic programming based approach. It assesses pairwise ANI estimates and chooses which genomes to keep if they are deemed redundant to each other based on assembly N50 (keeping the more contiguous assembly) and connectedness (favoring genomes deemed similar to a greater number of alternate genomes). 
+skDER will perform dereplication of genomes using skani average nucleotide identity (ANI) and aligned fraction (AF) estimates and either a dynamic programming or greedy-based based approach. It assesses such pairwise ANI & AF estimates to determine whether two genomes are similar to each other and then chooses which genome is better suited to serve as a representative based on assembly N50 (favoring the more contiguous assembly) and connectedness (favoring genomes deemed similar to a greater number of alternate genomes). 
     
-Compared to [dRep](https://github.com/MrOlm/drep) by [Olm et al. 2017](https://www.nature.com/articles/ismej2017126) and [galah](https://github.com/wwood/galah), skDER does not use a divide-and-conquer approach based on primary clustering with MASH or dashing followed by greedy clustering/dereplication based on more precise ANI estimates (for instance computed using FastANI) in a secondary round. skDER instead leverages advances in accurate yet speedy ANI calculations by [skani](https://github.com/bluenote-1577/skani) by [Shaw and Yu](https://www.biorxiv.org/content/10.1101/2023.01.18.524587v2) to simply take a "one-round" approach. skDER is also primarily designed for selecting distinct genomes for a taxonomic group for comparative genomics rather than for metagenomic application. 
+Compared to [dRep](https://github.com/MrOlm/drep) by [Olm et al. 2017](https://www.nature.com/articles/ismej2017126) and [galah](https://github.com/wwood/galah), skDER does not use a divide-and-conquer approach based on primary clustering with MASH or dashing followed by greedy clustering/dereplication based on more precise ANI estimates (for instance computed using FastANI) in a secondary round. skDER instead leverages advances in accurate yet speedy ANI calculations by [skani](https://github.com/bluenote-1577/skani) by [Shaw and Yu](https://www.nature.com/articles/s41592-023-02018-3) to simply take a "one-round" approach. skDER is also primarily designed for selecting distinct genomes for a taxonomic group for comparative genomics rather than for metagenomic application. 
 
-It can still be used for metagenomic application if users are cautious and filter out MAGs which have high levels of contamination, which can be assessed using CheckM for instance. To support this application and in particular the realization that most MAGs likely suffer from incompleteness, we have introduced a parameter/cutoff for the max alignment fraction  difference for each pair of genomes. For example, if the AF for genome 1 to genome 2 is 95% (95% of genome 1 is contained in  genome 2) and the AF for genome 2 to genome 1 is 80%, then the difference is 15%. Because the default value for the difference cutoff is 10%, in that example the genome with the larger value will automatically be regarded as redundant and become disqualified as a potential representative genome.
+skDER, specifically the "dynamic programming" based approach, can still be used for metagenomic applications if users are cautious and filter out MAGs or individual contigs which have high levels of contamination, which can be assessed using [CheckM](https://github.com/chklovski/CheckM2) or [charcoal](https://github.com/dib-lab/charcoal). To support this application with the realization that most MAGs likely suffer from incompleteness, we have introduced a parameter/cutoff for the max alignment fraction  difference for each pair of genomes. For example, if the AF for genome 1 to genome 2 is 95% (95% of genome 1 is contained in  genome 2) and the AF for genome 2 to genome 1 is 80%, then the difference is 15%. Because the default value for the difference cutoff is 10%, in that example the genome with the larger value will automatically be regarded as redundant and become disqualified as a potential representative genome.
 
 skDER features two distinct algorithms for dereplication (details can be found below):
 
-- **dynamic approach:** approximates selection of a single representative genome per transitive cluster - results in a concise listing of representative genomes.
-- **greedy approach:** performs selection based on greedy set cover type approach. 
+- **dynamic approach:** approximates selection of a single representative genome per transitive cluster - results in a concise listing of representative genomes - well suited for metagenomic applications [current default].
+- **greedy approach:** performs selection based on greedy set cover type approach - better suited to more comprehensively select representative genomes and sample more of a taxon's pangenome.
 
 ## Details on Dereplication Algorithms
 
 ### Using Dynamic Programming Dereplication Approach
 
-Unlike dRep and gallah, which implement greedy approaches for selecting representative genomes, the default dereplication method in skDER approximates selection of a single representative for coarser clusters of geneomes using a dynamic programming approach in which a set of genomes deemed as redundant is kept track of, avoiding the need to actually cluster genomes. 
+Unlike dRep and galah, which implement greedy approaches for selecting representative genomes, the default dereplication method in skDER approximates selection of a single representative for coarser clusters of geneomes using a dynamic programming approach in which a set of genomes deemed as redundant is kept track of, avoiding the need to actually cluster genomes. 
 
 Here is an overview of the typical workflow for skDER:
 
@@ -170,7 +170,7 @@ optional arguments:
 
 skDER relies heavily on advances made by **skani** for fast ANI estimation while retaining accuracy - thus if you use skDER for your research it is essential to cite skani:
 
-[Fast and robust metagenomic sequence comparison through sparse chaining with skani](https://www.biorxiv.org/content/10.1101/2023.01.18.524587v2)
+[Fast and robust metagenomic sequence comparison through sparse chaining with skani](https://www.nature.com/articles/s41592-023-02018-3)
 
 If you use the option to downlod genomes for a taxonomy based on GTDB classifications, please also cite:
 
