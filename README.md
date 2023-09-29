@@ -22,8 +22,6 @@ skDER: efficient & high-resolution dereplication of microbial genomes to select 
     
 <img src="https://raw.githubusercontent.com/raufs/skDER/main/images/Logo.png" alt="drawing" width="300"/>
 
-***Note, version 1.0.1 and earlier versions, had an overflow-related bug that resulted in inaccurate dereplication - this was resolved in version 1.0.2.***
-
 ## Installation
 
 ### Bioconda
