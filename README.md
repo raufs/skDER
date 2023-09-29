@@ -127,20 +127,20 @@ usage: skder [-h] [-g GENOMES [GENOMES ...]] [-t TAXA_NAME] -o
              [-f ALIGNED_FRACTION_CUTOFF] [-d MAX_AF_DISTANCE_CUTOFF]
              [-p SKANI_TRIANGLE_PARAMETERS] [-l] [-c CPUS] [-v]
 
-        Program: skDER.py
-        Author: Rauf Salamzade
-        Affiliation: Kalan Lab, UW Madison, Department of Medical Microbiology and Immunology
+	Program: skDER.py
+	Author: Rauf Salamzade
+	Affiliation: Kalan Lab, UW Madison, Department of Medical Microbiology and Immunology
 
-        skDER: efficient dynamic & high-resolution dereplication of microbial genomes to select representative genomes.
+	skDER: efficient & high-resolution dereplication of microbial genomes to select representative genomes.
 
-        skDER relies heavily on advances made by skani for fast ANI estimation while retaining accuracy - thus if you use skDER for your research it is essential to cite skani:
-        - "Fast and robust metagenomic sequence comparison through sparse chaining with skani"
+	skDER will perform dereplication of genomes using skani average nucleotide identity (ANI) and aligned fraction 
+	(AF) estimates and either a dynamic programming or greedy-based based approach. It assesses such pairwise ANI & 
+	AF estimates to determine whether two genomes are similar to each other and then chooses which genome is better 
+	suited to serve as a representative based on assembly N50 (favoring the more contiguous assembly) and connectedness 
+	(favoring genomes deemed similar to a greater number of alternate genomes).
+	
 
-        Also please consider citing the lsaBGC manuscript - where a predecessor version of the dynamic dereplication stratedgy employed by skder was first described:
-        - "Evolutionary investigations of the biosynthetic diversity in the skin microbiome using lsaBGC"
-
-
-optional arguments:
+options:
   -h, --help            show this help message and exit
   -g GENOMES [GENOMES ...], --genomes GENOMES [GENOMES ...]
                         Genome assembly files in FASTA format (each file should end with either *.fasta, *.fa, or *.fna) [Optional].
@@ -162,7 +162,6 @@ optional arguments:
                         requested. [Default is ""].
   -l, --symlink         Symlink representative genomes in results subdirectory instead of performing a copy of the files.
   -c CPUS, --cpus CPUS  Number of CPUs to use.
-  -v, --version         Report version of skDER.
 ```
 
 ## Citation notice
