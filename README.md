@@ -75,7 +75,7 @@ Here is an overview of the typical workflow for skDER:
 
 >- Download or process input genomes. 
 >- Compute and create a tsv linking each genome to their N50 assembly quality metric (_N50_[g]). 
->- Compute ANI and AF using skani triangle to get a tsv "edge listing" between pairs of genomes.
+>- Compute ANI and AF using skani triangle to get a tsv "edge listing" between pairs of genomes (with filters applied based on ANI and AF cutoffs).
 >- Run through "edge listing" tsv on first pass and compute connectivity (_C_[g]) for each genome - how many other genomes it is similar to at a certain threshold.
 >- Run through "N50" tsv and store information.
 >- Second pass through "edge listing" tsv and assess each pair one at a time keeping track of a singular set of genomes regarded as redudnant:
@@ -91,7 +91,7 @@ Here is an overview of this alternate approach:
 
 >- Download or process input genomes. 
 >- Compute and create a tsv linking each genome to their N50 assembly quality metric (_N50_[g]). 
->- Compute ANI and AF using skani triangle to get a tsv "edge listing" between pairs of genomes.
+>- Compute ANI and AF using skani triangle to get a tsv "edge listing" between pairs of genomes (with filters applied based on ANI and AF cutoffs).
 >- Run through "edge listing" tsv on first pass and compute connectivity (_C_[g]) for each genome - how many other genomes it is similar to at a certain threshold 
 >     - Only consider a genome as connected to a focal genome if they share an ANI greater than the `--percent_identity_cutoff` (default of 99%) and the comparing genome exhibits an AF greater than the `--aligned_fraction_cutoff` (default of 90%) to the focal genome (is sufficiently representative of both the core and auxiliary content of the focal genome).
 >- Run through "N50" tsv and compute the score for each genome: _N50_[g]*_C_[g] = _S_[g] and write to new tsv where each line corresponds to a single genome, the second column corresponds to the S[g] computed, and the third column to connected genomes to the focal genome. 
@@ -169,19 +169,17 @@ optional arguments:
 
 ## Citation notice
 
-skDER relies heavily on advances made by **skani** for fast ANI estimation while retaining accuracy - thus if you use skDER for your research it is essential to cite skani:
+skDER manuscript: 
+
+[skDER: microbial genome dereplication approaches for comparative and metagenomic applications](https://www.biorxiv.org/content/10.1101/2023.09.27.559801v1)
+
+skDER relies heavily on advances made by **skani** for fast ANI estimation while retaining accuracy - thus if you use skDER for your research please also cite skani:
 
 [Fast and robust metagenomic sequence comparison through sparse chaining with skani](https://www.nature.com/articles/s41592-023-02018-3)
 
 If you use the option to downlod genomes for a taxonomy based on GTDB classifications, please also cite:
 
 [GTDB: an ongoing census of bacterial and archaeal diversity through a phylogenetically consistent, rank normalized and complete genome-based taxonomy](https://academic.oup.com/nar/article/50/D1/D785/6370255)
-
-Please consider citing the lsaBGC manuscript - where a predecessor of the dynamic dereplication stratedgy employed by skder was first described:
-
-[Evolutionary investigations of the biosynthetic diversity in the skin microbiome using lsaBGC](https://www.microbiologyresearch.org/content/journal/mgen/10.1099/mgen.0.000988)
-
-Details on the dynamic clustering algorithm for now can be found below in this README.
 
 ## Acknowledgments
 
