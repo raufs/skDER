@@ -8,6 +8,8 @@
 
 skDER: efficient & high-resolution dereplication of microbial genomes to select representatives for comparative genomics and metagenomics. 
 
+**NOTE - 10/11/2023** I previously misunderstood the `-s` option in skani triangle to correspond to an identity cutoff for the final ANI values and not a preliminary one, resulting in usage of less accurate ANI calculations. Metrics reported in our manuscript have been updated on [this Wiki page](https://github.com/raufs/skDER/wiki/Alternate-Approaches-and-Comparisons) using skDER v1.0.7. In v1.0.7, we now just stick to using the default cutoff of 80% for the `-s` option which should result in fewer missed relationships that meet similarity cutoffs between genomes and lead to more accurate dereplication. The precomputed databases for the 17 genera  will be updated in the near future using v1.0.7+ (and we will update the manuscript on bioRxiv after). Apologies for any inconvenience. The good news, thanks to a suggestion from someone on GitHub issues, version 1.0.7, now features an option to perform secondary clustering and gives information on the distance of each genome in the input set to their closest representative genome.
+
 **Contents**
 
 1. [Installation](#installation)
@@ -54,7 +56,7 @@ pip install -e .
 
 skDER will perform dereplication of genomes using skani average nucleotide identity (ANI) and aligned fraction (AF) estimates and either a dynamic programming or greedy-based based approach. It assesses such pairwise ANI & AF estimates to determine whether two genomes are similar to each other and then chooses which genome is better suited to serve as a representative based on assembly N50 (favoring the more contiguous assembly) and connectedness (favoring genomes deemed similar to a greater number of alternate genomes). 
     
-Compared to [dRep](https://github.com/MrOlm/drep) by [Olm et al. 2017](https://www.nature.com/articles/ismej2017126) and [galah](https://github.com/wwood/galah), skDER does not use a divide-and-conquer approach based on primary clustering with MASH or dashing followed by greedy clustering/dereplication based on more precise ANI estimates (for instance computed using FastANI) in a secondary round. skDER instead leverages advances in accurate yet speedy ANI calculations by [skani](https://github.com/bluenote-1577/skani) by [Shaw and Yu](https://www.nature.com/articles/s41592-023-02018-3) to simply take a "one-round" approach. skDER is also primarily designed for selecting distinct genomes for a taxonomic group for comparative genomics rather than for metagenomic application. 
+Compared to [dRep](https://github.com/MrOlm/drep) by [Olm et al. 2017](https://www.nature.com/articles/ismej2017126) and [galah](https://github.com/wwood/galah), skDER does not use a divide-and-conquer approach based on primary clustering with MASH or dashing followed by greedy clustering/dereplication based on more precise ANI estimates (for instance computed using FastANI) in a secondary round. skDER instead leverages advances in accurate yet speedy ANI calculations by [skani](https://github.com/bluenote-1577/skani) by [Shaw and Yu](https://www.nature.com/articles/s41592-023-02018-3) to simply take a "one-round" approach (albeit skani triangle itself uses a preliminary 80% ANI cutoff based on k-mer sketches). skDER is also primarily designed for selecting distinct genomes for a taxonomic group for comparative genomics rather than for metagenomic application. 
 
 skDER, specifically the "dynamic programming" based approach, can still be used for metagenomic applications if users are cautious and filter out MAGs or individual contigs which have high levels of contamination, which can be assessed using [CheckM](https://github.com/chklovski/CheckM2) or [charcoal](https://github.com/dib-lab/charcoal). To support this application with the realization that most MAGs likely suffer from incompleteness, we have introduced a parameter/cutoff for the max alignment fraction  difference for each pair of genomes. For example, if the AF for genome 1 to genome 2 is 95% (95% of genome 1 is contained in  genome 2) and the AF for genome 2 to genome 1 is 80%, then the difference is 15%. Because the default value for the difference cutoff is 10%, in that example the genome with the larger value will automatically be regarded as redundant and become disqualified as a potential representative genome.
 
@@ -166,13 +168,13 @@ options:
 
 ## Citation notice
 
+skDER relies heavily on advances made by **skani** for fast ANI estimation while retaining accuracy - thus if you use skDER for your research please cite skani:
+
+[Fast and robust metagenomic sequence comparison through sparse chaining with skani](https://www.nature.com/articles/s41592-023-02018-3)
+
 skDER manuscript: 
 
 [skDER: microbial genome dereplication approaches for comparative and metagenomic applications](https://www.biorxiv.org/content/10.1101/2023.09.27.559801v1)
-
-skDER relies heavily on advances made by **skani** for fast ANI estimation while retaining accuracy - thus if you use skDER for your research please also cite skani:
-
-[Fast and robust metagenomic sequence comparison through sparse chaining with skani](https://www.nature.com/articles/s41592-023-02018-3)
 
 If you use the option to downlod genomes for a taxonomy based on GTDB classifications, please also cite:
 

@@ -61,12 +61,14 @@ string doubleToString(double val) {
 int main (int argc, char* argv[]) {
     if ( argv[1]==NULL || (argv[1][0]=='-' && argv[1][1]=='h') || (argv[1][0]=='-' && argv[1][1]=='-' && argv[1][2]=='h') ) {
 	    cout << "Usage:" << endl;
-	    cout << "skDERsum <skani triangle edge listing file> <n50 listing file> <alignment fraction cutoff>" << endl;
+	    cout << "skDERsum <skani triangle edge listing file> <n50 listing file> <min ANI> <min AF>" << endl;
 	    return 0;
     }
     else {
-	double min_af;
-	sscanf(argv[3],"%lf",&min_af);
+	    double min_ani;
+	    sscanf(argv[3],"%lf",&min_ani);
+        double min_af;
+        sscanf(argv[4],"%lf",&min_af);
 
         /*
         First pass through skani edge file to assess connectivity of each genome.
@@ -75,7 +77,7 @@ int main (int argc, char* argv[]) {
         int line_count_1 = 0;
         double af_query, af_subject;
         int split_counter;
-	double query_af, subject_af; 
+	    double ani, query_af, subject_af; 
         set<string> all_samples;
         map<string, int> connectivity_dictionary;
         map<string, vector<string>> connected_members;
@@ -95,27 +97,33 @@ int main (int argc, char* argv[]) {
                         else if (split_counter == 1) {
                             subject = i;
                         } 
-			else if (split_counter == 3) {
-			    query_af = stod(i);
-			} 
-			else if (split_counter == 4) {
-			    subject_af = stod(i);
-			}
+                        else if (split_counter == 2) {
+                            ani = stod(i);
+                        } 
+			            else if (split_counter == 3) {
+			                query_af = stod(i);
+			            } 
+			            else if (split_counter == 4) {
+			                subject_af = stod(i);
+			            }
                         split_counter++;
                     }
-		    // this is the converse of what I had originally 
-		    // because the larger genomes were getting disregarded
-		    if (subject_af >= min_af) {
-			all_samples.insert(query);
-                        connectivity_dictionary[query]++;
-			connected_members[query].push_back(subject);
-		    }
-		    if (query_af >= min_af) {
-			all_samples.insert(subject);
-                        connectivity_dictionary[subject]++;
-		        connected_members[subject].push_back(query);
+                    
+                    if ((ani >= min_ani) && (query_af >= min_af || subject_af >= min_af)) {
+                        // this is the converse of what I had originally 
+                        // because the larger genomes were getting disregarded
+                        if (subject_af >= min_af) {
+                            all_samples.insert(query);
+                            connectivity_dictionary[query]++;
+                            connected_members[query].push_back(subject);
+                        }
+                        if (query_af >= min_af) {
+                            all_samples.insert(subject);
+                            connectivity_dictionary[subject]++;
+                            connected_members[subject].push_back(query);
+                        }
                     }
-		}
+		        }
                 line_count_1++;
             }
         } else {
@@ -128,7 +136,7 @@ int main (int argc, char* argv[]) {
         */
         int n50_val;
         double score;
-	string sample, member_list;
+    	string sample, member_list;
         input_file.open (argv[2]);
         if (input_file.is_open()) {
             while (input_file.good()) {
@@ -145,15 +153,14 @@ int main (int argc, char* argv[]) {
                         }
                         split_counter++;
                     }
-		    if (all_samples.count(sample) != 0) {
+		            if (all_samples.count(sample) != 0) {
                         score = (double)n50_val*(double)connectivity_dictionary[sample];
-			member_list = joinVectorString(connected_members[sample]);
+			            member_list = joinVectorString(connected_members[sample]);
                         cout << sample + '\t' + doubleToString(score) + '\t' + member_list << endl;
                     } else {
-			cout << sample + "\t0.0\t" << endl;
-	            }
-		    
-		}
+			            cout << sample + "\t0.0\t" << endl;
+	                }
+		        }
             }
         } else {
   	        cout << "ERROR: Unable to open file " + (string)argv[1] << endl;

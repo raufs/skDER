@@ -42,22 +42,27 @@ vector<string> split (string s, string delimiter) {
 int main (int argc, char* argv[]) {
     if ( argv[1]==NULL || (argv[1][0]=='-' && argv[1][1]=='h') || (argv[1][0]=='-' && argv[1][1]=='-' && argv[1][2]=='h') ) {
 	    cout << "Usage:" << endl;
-	    cout << "skDERcore <skani triangle edge listing file> <n50 listing file> <max AF difference for disqualification>" << endl;
+	    cout << "skDERcore <skani triangle edge listing file> <n50 listing file> <min ANI> <min AF> <max AF difference for disqualification>" << endl;
 	    return 0;
     }
     else {
          /*
          Parse cutoff as float
          */
-        double max_af_difference;
-        sscanf(argv[3],"%lf",&max_af_difference);
 
+        double min_ani;
+        sscanf(argv[3],"%lf",&min_ani);
+        double min_af;
+        sscanf(argv[4],"%lf",&min_af);
+        double max_af_difference;
+        sscanf(argv[5],"%lf",&max_af_difference);
+        
         /*
         First pass through skani edge file to assess connectivity of each genome.
         */
         string line, query, subject;
         int line_count_1 = 0;
-        double af_query, af_subject, delta_af;
+        double ani, af_query, af_subject, delta_af;
         int split_counter;
         map<string, int> connectivity_dictionary;
         vector<string> v;
@@ -76,10 +81,21 @@ int main (int argc, char* argv[]) {
                         else if (split_counter == 1) {
                             subject = i;
                         }
+                        else if (split_counter == 2) {
+                            ani = stod(i);
+                        }
+                        else if (split_counter == 3) {
+                            af_query = stod(i);
+                        }
+                        else if (split_counter == 4) {
+                            af_subject = stod(i);
+                        }
                         split_counter++;
                     }
-                    connectivity_dictionary[query]++;
-                    connectivity_dictionary[subject]++;
+                    if ((ani >= min_ani) && (af_query >= min_af || af_subject >= min_af)) {
+                        connectivity_dictionary[query]++;
+                        connectivity_dictionary[subject]++;
+                    }
                 }
                 line_count_1++;
             }
@@ -139,6 +155,9 @@ int main (int argc, char* argv[]) {
                         else if (split_counter == 1) {
                             subject = i;
                         }
+                        else if (split_counter == 2) {
+                            ani = stod(i);
+                        }
                         else if (split_counter == 3) {
                             af_query = stod(i);
                         }
@@ -147,20 +166,22 @@ int main (int argc, char* argv[]) {
                         }
                         split_counter++;
                     }
-                    delta_af = af_query - af_subject;
-                    if (delta_af <= max_af_difference) {
-                        if (af_query > af_subject) {
-                            redundancy_set.insert(query);
+                    if ((ani >= min_ani) && (af_query >= min_af || af_subject >=  min_af)) {
+                        delta_af = af_query - af_subject;
+                        if (delta_af <= max_af_difference) {
+                            if (af_query > af_subject) {
+                                redundancy_set.insert(query);
+                            } else {
+                                redundancy_set.insert(subject);
+                            }
                         } else {
-                            redundancy_set.insert(subject);
-                        }
-                    } else {
-                        query_score = (double)n50_dictionary[query]*(double)connectivity_dictionary[query];
-                        subject_score = (double)n50_dictionary[subject]*(double)connectivity_dictionary[subject];
-                        if (query_score >= subject_score) {
-                            redundancy_set.insert(subject);
-                        } else {
-                            redundancy_set.insert(query);
+                            query_score = (double)n50_dictionary[query]*(double)connectivity_dictionary[query];
+                            subject_score = (double)n50_dictionary[subject]*(double)connectivity_dictionary[subject];
+                            if (query_score >= subject_score) {
+                                redundancy_set.insert(subject);
+                            } else {
+                                redundancy_set.insert(query);
+                            }
                         }
                     }
                 }
