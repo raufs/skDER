@@ -124,23 +124,22 @@ skder -h
 
 The help function should return the following
 ```
-usage: skder [-h] [-g GENOMES [GENOMES ...]] [-t TAXA_NAME] -o
-             OUTPUT_DIRECTORY [-m SELECTION_MODE] [-i PERCENT_IDENTITY_CUTOFF]
-             [-f ALIGNED_FRACTION_CUTOFF] [-d MAX_AF_DISTANCE_CUTOFF]
-             [-p SKANI_TRIANGLE_PARAMETERS] [-l] [-c CPUS] [-v]
+usage: skder [-h] [-g GENOMES [GENOMES ...]] [-t TAXA_NAME] -o OUTPUT_DIRECTORY
+             [-d DEREPLICATION_MODE] [-i PERCENT_IDENTITY_CUTOFF] [-f ALIGNED_FRACTION_CUTOFF]
+             [-a MAX_AF_DISTANCE_CUTOFF] [-p SKANI_TRIANGLE_PARAMETERS] [-l] [-c CPUS] [-n] [-v]
 
-	Program: skDER.py
-	Author: Rauf Salamzade
-	Affiliation: Kalan Lab, UW Madison, Department of Medical Microbiology and Immunology
+        Program: skder
+        Author: Rauf Salamzade
+        Affiliation: Kalan Lab, UW Madison, Department of Medical Microbiology and Immunology
 
-	skDER: efficient & high-resolution dereplication of microbial genomes to select representative genomes.
+        skDER: efficient & high-resolution dereplication of microbial genomes to select representative genomes.
 
-	skDER will perform dereplication of genomes using skani average nucleotide identity (ANI) and aligned fraction 
-	(AF) estimates and either a dynamic programming or greedy-based based approach. It assesses such pairwise ANI & 
-	AF estimates to determine whether two genomes are similar to each other and then chooses which genome is better 
-	suited to serve as a representative based on assembly N50 (favoring the more contiguous assembly) and connectedness 
-	(favoring genomes deemed similar to a greater number of alternate genomes).
-	
+        skDER will perform dereplication of genomes using skani average nucleotide identity (ANI) and aligned fraction 
+        (AF) estimates and either a dynamic programming or greedy-based based approach. It assesses such pairwise ANI & 
+        AF estimates to determine whether two genomes are similar to each other and then chooses which genome is better 
+        suited to serve as a representative based on assembly N50 (favoring the more contiguous assembly) and connectedness 
+        (favoring genomes deemed similar to a greater number of alternate genomes).
+
 
 options:
   -h, --help            show this help message and exit
@@ -150,13 +149,13 @@ options:
                         Genus or species identifier from GTDB (currently R214) for which to download genomes for [Optional].
   -o OUTPUT_DIRECTORY, --output_directory OUTPUT_DIRECTORY
                         Output directory.
-  -m SELECTION_MODE, --selection_mode SELECTION_MODE
+  -d DEREPLICATION_MODE, --dereplication_mode DEREPLICATION_MODE
                         Whether to use a "dynamic" (more concise) or "greedy" (more comprehensive) approach to selecting representative genomes. [Default is "dynamic"]
   -i PERCENT_IDENTITY_CUTOFF, --percent_identity_cutoff PERCENT_IDENTITY_CUTOFF
                         ANI cutoff for dereplication [Default is 99.0].
   -f ALIGNED_FRACTION_CUTOFF, --aligned_fraction_cutoff ALIGNED_FRACTION_CUTOFF
                         Aligned cutoff threshold for dereplication - only needed by one genome [Default is 90.0].
-  -d MAX_AF_DISTANCE_CUTOFF, --max_af_distance_cutoff MAX_AF_DISTANCE_CUTOFF
+  -a MAX_AF_DISTANCE_CUTOFF, --max_af_distance_cutoff MAX_AF_DISTANCE_CUTOFF
                         Maximum difference for aligned fraction between a pair to automatically disqualify the genome with a higher AF from being a representative.
   -p SKANI_TRIANGLE_PARAMETERS, --skani_triangle_parameters SKANI_TRIANGLE_PARAMETERS
                         Options for skani triangle. Note ANI and AF cutoffs
@@ -164,6 +163,9 @@ options:
                         requested. [Default is ""].
   -l, --symlink         Symlink representative genomes in results subdirectory instead of performing a copy of the files.
   -c CPUS, --cpus CPUS  Number of CPUs to use.
+  -n, --determine_clusters
+                        Perform secondary clustering to assign non-representative genomes to their closest representative genomes.
+  -v, --version         Report version of skDER.
 ```
 
 ## Citation notice
