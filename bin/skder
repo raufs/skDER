@@ -141,16 +141,14 @@ def skder_main():
 	all_genomes_listing_file = outdir + 'All_Genomes_Listing.txt'
 
 	if taxa_name != "None" and taxa_name != None:
-		# Step 0: parse GTDB information file, get list of Genbank accessions, and perform dry-run with
-		# ncbi-genome-download if requested.
-		gtdb_listing_file = SKDER_DIR + 'GTDB_R214_Information.txt.gz'
-
-		if not os.path.isfile(gtdb_listing_file):
-			sys.stdout.write("GTDB listing file not available, using wget to download it.\n")
-			logObject.info("\nGTDB listing file not available, using wget to download it.")
-			wget_cmd = ['wget', 'https://github.com/Kalan-Lab/lsaBGC/raw/main/db/GTDB_R214_Information.txt.gz', '-P', outdir]
-			gtdb_listing_file = outdir + "GTDB_R214_Information.txt.gz"
-			util.runCmd(wget_cmd, logObject, check_files=[gtdb_listing_file])
+		# Step 0: Download GTDB listing file from lsaBGC git repo, parse GTDB information 
+		# file, get list of Genbank accessions, and perform dry-run with ncbi-genome-download 
+		# if requested.
+		sys.stdout.write("GTDB listing file not available, using wget to download it.\n")
+		logObject.info("\nGTDB listing file not available, using wget to download it.")
+		wget_cmd = ['wget', 'https://github.com/Kalan-Lab/lsaBGC/raw/main/db/GTDB_R214_Information.txt.gz', '-P', outdir]
+		gtdb_listing_file = outdir + "GTDB_R214_Information.txt.gz"
+		util.runCmd(wget_cmd, logObject, check_files=[gtdb_listing_file])
 
 		genbank_accession_listing_file = outdir + 'NCBI_Genbank_Accession_Listing.txt'
 		sys.stdout.write("--------------------\nStep 0\n--------------------\nBeginning by assessing which genomic assemblies are available for the taxa %s in GTDB and NCBI's Genbank db\n" % taxa_name)
