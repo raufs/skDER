@@ -215,7 +215,7 @@ def skder_main():
 									ls = line.split('\t')
 									if ls[0] == 'none': continue
 									gca = ls[0]
-									sp_name = ls[2]
+									sp_name = '_'.join(ls[2].split())
 									gca_to_species_name[gca] = sp_name
 									
 						gf_listing_handle = open(all_genomes_listing_file, 'a+')
