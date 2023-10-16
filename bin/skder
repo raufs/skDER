@@ -207,12 +207,27 @@ def skder_main():
 						p = multiprocessing.Pool(cpus)
 						p.map(util.multiProcess, uncompress_cmds)
 						p.close()
+
+						gca_to_species_name = {}
+						with gzip.open(gtdb_listing_file, 'rt') as ogtdb:
+								for line in ogtdb:
+									line = line.strip('\n')
+									ls = line.split('\t')
+									if ls[0] == 'none': continue
+									gca = ls[0]
+									sp_name = ls[2]
+									gca_to_species_name[gca] = sp_name
+									
 						gf_listing_handle = open(all_genomes_listing_file, 'a+')
 						for gf in os.listdir(genomes_directory):
 							gfile = genomes_directory + gf  
 							if not gfile.endswith('.fasta') and not gfile.endswith('.fa') and not gfile.endswith('.fna'): continue
 							assert (util.is_fasta(gfile))
-							gf_listing_handle.write(gfile + '\n')
+							gca = '_'.join(gf.split('_')[:2])
+							species_name = gca_to_species_name[gca]
+							renamed_gfile = genomes_directory + species_name + '_' + gca + '.fasta'
+							os.rename(gfile, renamed_gfile)
+							gf_listing_handle.write(renamed_gfile + '\n')
 						gf_listing_handle.close()
 
 	if genomes:
