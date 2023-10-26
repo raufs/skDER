@@ -8,6 +8,7 @@
 
 skDER: efficient & high-resolution dereplication of microbial genomes to select representatives for comparative genomics and metagenomics. 
 
+**Update - 10/25/2023** Pre-computed databases of representative genomes for select bacterial taxa have now been updated using skDER v1.0.7 on [Zenodo](https://zenodo.org/records/10041203).
 **NOTE - 10/11/2023** I previously misunderstood the `-s` option in skani triangle to correspond to an identity cutoff for the final ANI values and not a preliminary one, resulting in usage of less accurate ANI calculations. Metrics reported in our manuscript have been updated on [this Wiki page](https://github.com/raufs/skDER/wiki/Alternate-Approaches-and-Comparisons) using skDER v1.0.7. In v1.0.7, we now just stick to using the default cutoff of 80% for the `-s` option which should result in fewer missed relationships that meet similarity cutoffs between genomes and lead to more accurate dereplication. The precomputed databases for the 17 genera  will be updated in the near future using v1.0.7+ (and we will update the manuscript on bioRxiv after). Apologies for any inconvenience. The good news, thanks to a suggestion from someone on GitHub issues, version 1.0.7, now features an option to perform secondary clustering and gives information on the distance of each genome in the input set to their closest representative genome.
 
 **Contents**
@@ -20,7 +21,7 @@ skDER: efficient & high-resolution dereplication of microbial genomes to select 
 6. [Test case](#test-case)
 7. [Usage](#usage)
 8. [Citation notice](#citation-notice)
-9. [Representative genomes for 17 bacterial taxa from GTDB R214](https://zenodo.org/record/8267523)
+9. [Representative genomes for select bacterial taxa from GTDB R214](https://zenodo.org/records/10041203)
     
 <img src="https://raw.githubusercontent.com/raufs/skDER/main/images/Logo.png" alt="drawing" width="300"/>
 
