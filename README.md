@@ -67,7 +67,7 @@ skDER features two distinct algorithms for dereplication (details can be found b
 
 ## Details on Dereplication Algorithms
 
-### Using Dynamic Programming Dereplication Approach
+### Using the Dynamic Programming Dereplication Approach
 
 Unlike dRep and galah, which implement greedy approaches for selecting representative genomes, the default dereplication method in skDER approximates selection of a single representative for coarser clusters of geneomes using a dynamic programming approach in which a set of genomes deemed as redundant is kept track of, avoiding the need to actually cluster genomes. 
 
@@ -83,7 +83,7 @@ Here is an overview of the typical workflow for skDER:
 >    - else calculate the following score for each genome: _N50_[g]*_C_[g] = _S_[g] and regard corresponding genome for min(_S_[g1], _S_[g2]) as redundant.
 >- Second pass through "N50" tsv file and record genome identifier if they were never deemed redudant.
     
-### Using Greedy Dereplication Approach 
+### Using the Greedy Dereplication Approach 
 
 Starting from v1.0.2, skDER also allows users to request greedy clustering instead. This generally leads to a larger, more-comprehensive selection of representative genomes that covers more of the pan-genome.  
 
@@ -174,7 +174,7 @@ skDER relies heavily on advances made by **skani** for fast ANI estimation while
 
 [Fast and robust metagenomic sequence comparison through sparse chaining with skani](https://www.nature.com/articles/s41592-023-02018-3)
 
-skDER manuscript: 
+as well as the skDER manuscript: 
 
 [skDER: microbial genome dereplication approaches for comparative and metagenomic applications](https://www.biorxiv.org/content/10.1101/2023.09.27.559801v1)
 
