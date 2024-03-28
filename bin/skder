@@ -51,6 +51,8 @@ import multiprocessing
 
 version = pkg_resources.require("skDER")[0].version
 
+ACCEPTED_SUFFICES = set(['fasta', 'fas', 'fna', 'fa'])
+
 def create_parser():
 	""" Parse arguments """
 	parser = argparse.ArgumentParser(description="""
@@ -75,9 +77,11 @@ def create_parser():
 	parser.add_argument('-f', '--aligned_fraction_cutoff', type=float, help="Aligned cutoff threshold for dereplication - only needed by one genome [Default is 90.0].", required=False, default=90.0)
 	parser.add_argument('-a', '--max_af_distance_cutoff', type=float, help="Maximum difference for aligned fraction between a pair to automatically disqualify the genome with a higher AF from being a representative.", required=False, default=10.0)
 	parser.add_argument('-p', '--skani_triangle_parameters', help="Options for skani triangle. Note ANI and AF cutoffs\nare specified separately and the -E parameter is always\nrequested. [Default is \"\"].", default="", required=False)
-	parser.add_argument('-l', '--symlink', action='store_true', help="Symlink representative genomes in results subdirectory instead of performing a copy of the files.", required=False, default=False)
 	parser.add_argument('-c', '--cpus', type=int, help="Number of CPUs to use.", required=False, default=1)
-	parser.add_argument('-n', '--determine_clusters', action='store_true', help="Perform secondary clustering to assign non-representative genomes to their closest representative genomes.", required=False, default=False)
+	parser.add_argument('-s', '--sanity_check', action='store_true', help="Confirm each FASTA file provided or downloaded is actually\na FASTA file. Makes it slower, but generally\ngood practice.", required=False, default=False)
+	parser.add_argument('-n', '--determine_clusters', action='store_true', help="Perform secondary clustering to assign non-representative\ngenomes to their closest representative genomes.", required=False, default=False)
+	parser.add_argument('-l', '--symlink', action='store_true', help="Symlink representative genomes in results subdirectory\ninstead of performing a copy of the files.", required=False, default=False)
+	parser.add_argument('-x', '--avoid_symlink', action='store_true', help="By default, skDER symlinks input genomes provided by users\ninto the output directory to avoid creating N50 related index files\nin the directory of the original input genomes. If your system doesn't\nsupport symlink - you can use this flag, but it will create index\nfiles for N50 calculations in the same directory as\nyour genomes.", required=False, default=False)
 	parser.add_argument('-v', '--version', action='store_true', help="Report version of skDER.", required=False, default=False)
 	args = parser.parse_args()
 	return args
@@ -103,7 +107,8 @@ def skder_main():
 	cpus = myargs.cpus
 	symlink_flag = myargs.symlink
 	determine_clusters_flag = myargs.determine_clusters
-	version_flag = myargs.version
+	sanity_check = myargs.sanity_check
+	avoid_symlink_flag = myargs.avoid_symlink
 
 	try:
 		assert(selection_mode in set(['dynamic', 'greedy']))
@@ -151,8 +156,8 @@ def skder_main():
 		util.runCmd(wget_cmd, logObject, check_files=[gtdb_listing_file])
 
 		genbank_accession_listing_file = outdir + 'NCBI_Genbank_Accession_Listing.txt'
-		sys.stdout.write("--------------------\nStep 0\n--------------------\nBeginning by assessing which genomic assemblies are available for the taxa %s in GTDB and NCBI's Genbank db\n" % taxa_name)
-		logObject.info("\n--------------------\nStep 0\n--------------------\nBeginning by assessing which genomic assemblies are available for the taxa %s in GTDB and NCBI's Genbank db" % taxa_name)
+		sys.stdout.write("--------------------\nStep 0\n--------------------\nBeginning by assessing which genomic assemblies are available for the taxa %s in GTDB and NCBI's GenBank db\n" % taxa_name)
+		logObject.info("\n--------------------\nStep 0\n--------------------\nBeginning by assessing which genomic assemblies are available for the taxa %s in GTDB and NCBI's GenBank db" % taxa_name)
 
 		if not os.path.isfile(genbank_accession_listing_file):
 			genbank_accession_listing_handle = open(genbank_accession_listing_file, 'w')
@@ -194,20 +199,22 @@ def skder_main():
 				logObject.info('Warning: no genomes could be downloaded with ncbi-genome-download.')
 			else:
 				# Download all genomes in FASTA format & prodigal gene calling
-				genomes_directory = outdir + 'ngd_fasta/'
+				genomes_directory = outdir + 'gtdb_ncbi_genomes/'
 				if not os.path.isfile(all_genomes_listing_file):
 					if genome_count != 0:
 						ngd_real_cmd = ['ncbi-genome-download', '--formats', 'fasta', '--retries', '2', '--section',
-								'genbank', '-A', genbank_accession_listing_file, '-o', genomes_directory,
-								'--flat-output',  'bacteria']
+								'genbank', '-A', genbank_accession_listing_file, '-o', genomes_directory, '--flat-output',  'bacteria']
 						util.runCmd(ngd_real_cmd, logObject, check_directories=[genomes_directory])
+						"""
+						# files get are not uncompressed anymore as of v1.0.9
 						uncompress_cmds = []
 						for f in os.listdir(genomes_directory):
 							uncompress_cmds.append(['gunzip', genomes_directory + f])#, logObject])
+						
 						p = multiprocessing.Pool(cpus)
 						p.map(util.multiProcess, uncompress_cmds)
 						p.close()
-
+						"""
 						gca_to_species_name = {}
 						with gzip.open(gtdb_listing_file, 'rt') as ogtdb:
 								for line in ogtdb:
@@ -220,22 +227,36 @@ def skder_main():
 									
 						gf_listing_handle = open(all_genomes_listing_file, 'a+')
 						for gf in os.listdir(genomes_directory):
-							gfile = genomes_directory + gf  
-							if not gfile.endswith('.fasta') and not gfile.endswith('.fa') and not gfile.endswith('.fna'): continue
-							assert (util.is_fasta(gfile))
+							gfile = genomes_directory + gf 
+							suffix = '.gz'.join(gf.split('.gz')[:-1]).split('.')[-1].lower()
+							if not suffix in ACCEPTED_SUFFICES: continue
+							if sanity_check:
+								assert (util.is_fasta(gfile))
 							gca = '_'.join(gf.split('_')[:2])
 							species_name = gca_to_species_name[gca]
-							renamed_gfile = genomes_directory + species_name + '_' + gca + '.fasta'
+							renamed_gfile = genomes_directory + species_name + '_' + gca + '.fasta.gz'
 							os.rename(gfile, renamed_gfile)
 							gf_listing_handle.write(renamed_gfile + '\n')
 						gf_listing_handle.close()
 
 	if genomes:
+		symlink_genomes_directory = outdir + 'local_genomes/' 
+		util.setupDirectories([symlink_genomes_directory])
 		gf_listing_handle = open(all_genomes_listing_file, 'a+')
 		for gf in genomes:
-			if not gf.endswith('.fasta') and not gf.endswith('.fa') and not gf.endswith('.fna'): continue
-			assert(util.is_fasta(gf))
-			gf_listing_handle.write(gf + '\n')
+			gf = os.path.abspath(gf)
+			suffix = gf.split('.')[-1].lower()
+			if gf.endswith('.gz'):
+				suffix = '.gz'.join(gf.split('.gz')[:-1]).split('.')[-1].lower()
+			if not suffix in ACCEPTED_SUFFICES: continue
+			if sanity_check:
+				assert(util.is_fasta(gf))
+			if avoid_symlink_flag:
+				gf_listing_handle.write(gf + '\n')
+			else:
+				sl_gf = symlink_genomes_directory + gf.split('/')[-1]
+				os.symlink(gf, sl_gf)
+				gf_listing_handle.write(sl_gf + '\n')
 		gf_listing_handle.close()
 
 	number_of_genomes = None
@@ -251,7 +272,7 @@ def skder_main():
 
 	# calculate N50s
 	n50_dir = outdir + 'Assembly_N50s/'
-	os.system('mkdir ' + n50_dir)
+	util.setupDirectories([n50_dir])
 	n50_inputs = []
 	with open(all_genomes_listing_file) as oaglf:
 		for line in oaglf:

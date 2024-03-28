@@ -6,6 +6,7 @@ import shutil
 import pyfastx
 import subprocess
 from Bio import SeqIO
+import gzip
 
 def createLoggerObject(log_file):
 	"""

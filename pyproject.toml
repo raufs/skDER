@@ -1,7 +1,7 @@
 [project]
 name = "skDER"
 authors = [{name="Rauf Salamzade", email="salamzader@gmail.com"}]
-version = "1.0.8"
+version = "1.0.9"
 description = "Program to select distinct representatives from an input set of microbial genomes."
 
 [build-system]
