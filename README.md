@@ -122,49 +122,71 @@ bash ./run_tests.sh
 skder -h
 ```
 
-The help function should return the following
+The help function should return the following:
+
 ```
-usage: skder [-h] [-g GENOMES [GENOMES ...]] [-t TAXA_NAME] -o OUTPUT_DIRECTORY
-             [-d DEREPLICATION_MODE] [-i PERCENT_IDENTITY_CUTOFF] [-f ALIGNED_FRACTION_CUTOFF]
-             [-a MAX_AF_DISTANCE_CUTOFF] [-p SKANI_TRIANGLE_PARAMETERS] [-l] [-c CPUS] [-n] [-v]
+usage: skder [-h] [-g GENOMES [GENOMES ...]] [-t TAXA_NAME] -o OUTPUT_DIRECTORY [-d DEREPLICATION_MODE] [-i PERCENT_IDENTITY_CUTOFF] [-f ALIGNED_FRACTION_CUTOFF] [-a MAX_AF_DISTANCE_CUTOFF]
+             [-p SKANI_TRIANGLE_PARAMETERS] [-c CPUS] [-s] [-n] [-l] [-x] [-v]
 
-        Program: skder
-        Author: Rauf Salamzade
-        Affiliation: Kalan Lab, UW Madison, Department of Medical Microbiology and Immunology
+	Program: skder
+	Author: Rauf Salamzade
+	Affiliation: Kalan Lab, UW Madison, Department of Medical Microbiology and Immunology
 
-        skDER: efficient & high-resolution dereplication of microbial genomes to select representative genomes.
+	skDER: efficient & high-resolution dereplication of microbial genomes to select 
+		   representative genomes.
 
-        skDER will perform dereplication of genomes using skani average nucleotide identity (ANI) and aligned fraction 
-        (AF) estimates and either a dynamic programming or greedy-based based approach. It assesses such pairwise ANI & 
-        AF estimates to determine whether two genomes are similar to each other and then chooses which genome is better 
-        suited to serve as a representative based on assembly N50 (favoring the more contiguous assembly) and connectedness 
-        (favoring genomes deemed similar to a greater number of alternate genomes).
-
+	skDER will perform dereplication of genomes using skani average nucleotide identity 
+	(ANI) and aligned fraction (AF) estimates and either a dynamic programming or 
+	greedy-based based approach. It assesses such pairwise ANI & AF estimates to determine 
+	whether two genomes are similar to each other and then chooses which genome is better 
+	suited to serve as a representative based on assembly N50 (favoring the more contiguous 
+	assembly) and connectedness (favoring genomes deemed similar to a greater number of 
+	alternate genomes).
+	
 
 options:
   -h, --help            show this help message and exit
   -g GENOMES [GENOMES ...], --genomes GENOMES [GENOMES ...]
-                        Genome assembly files in FASTA format (each file should end with either *.fasta, *.fa, or *.fna) [Optional].
+                        Genome assembly files in (gzipped) FASTA format
+                        (accepted suffices are: *.fasta,
+                        *.fa, *.fas, or *.fna) [Optional].
   -t TAXA_NAME, --taxa_name TAXA_NAME
-                        Genus or species identifier from GTDB (currently R214) for which to download genomes for [Optional].
+                        Genus or species identifier from GTDB (currently R214)
+                        for which to download genomes for [Optional].
   -o OUTPUT_DIRECTORY, --output_directory OUTPUT_DIRECTORY
                         Output directory.
   -d DEREPLICATION_MODE, --dereplication_mode DEREPLICATION_MODE
-                        Whether to use a "dynamic" (more concise) or "greedy" (more comprehensive) approach to selecting representative genomes. [Default is "dynamic"]
+                        Whether to use a "dynamic" (more concise) or "greedy" (more
+                        comprehensive) approach to selecting representative genomes.
+                        [Default is "dynamic"]
   -i PERCENT_IDENTITY_CUTOFF, --percent_identity_cutoff PERCENT_IDENTITY_CUTOFF
                         ANI cutoff for dereplication [Default is 99.0].
   -f ALIGNED_FRACTION_CUTOFF, --aligned_fraction_cutoff ALIGNED_FRACTION_CUTOFF
-                        Aligned cutoff threshold for dereplication - only needed by one genome [Default is 90.0].
+                        Aligned cutoff threshold for dereplication - only needed by
+                        one genome [Default is 90.0].
   -a MAX_AF_DISTANCE_CUTOFF, --max_af_distance_cutoff MAX_AF_DISTANCE_CUTOFF
-                        Maximum difference for aligned fraction between a pair to automatically disqualify the genome with a higher AF from being a representative.
+                        Maximum difference for aligned fraction between a pair to
+                        automatically disqualify the genome with a higher
+                        AF from being a representative.
   -p SKANI_TRIANGLE_PARAMETERS, --skani_triangle_parameters SKANI_TRIANGLE_PARAMETERS
                         Options for skani triangle. Note ANI and AF cutoffs
                         are specified separately and the -E parameter is always
                         requested. [Default is ""].
-  -l, --symlink         Symlink representative genomes in results subdirectory instead of performing a copy of the files.
   -c CPUS, --cpus CPUS  Number of CPUs to use.
+  -s, --sanity_check    Confirm each FASTA file provided or downloaded is actually
+                        a FASTA file. Makes it slower, but generally
+                        good practice.
   -n, --determine_clusters
-                        Perform secondary clustering to assign non-representative genomes to their closest representative genomes.
+                        Perform secondary clustering to assign non-representative
+                        genomes to their closest representative genomes.
+  -l, --symlink         Symlink representative genomes in results subdirectory
+                        instead of performing a copy of the files.
+  -x, --avoid_symlink   By default, skDER symlinks input genomes provided by users
+                        into the output directory to avoid creating N50 related index files
+                        in the directory of the original input genomes. If your system doesn't
+                        support symlink - you can use this flag, but it will create index
+                        files for N50 calculations in the same directory as
+                        your genomes.
   -v, --version         Report version of skDER.
 ```
 
