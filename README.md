@@ -1,14 +1,14 @@
 # skDER
 
 [![Preprint](https://img.shields.io/badge/Manuscript-bioRxiv-darkblue?style=flat-square&maxAge=2678400)](https://www.biorxiv.org/content/10.1101/2023.09.27.559801v2)
-[![Anaconda-Server Badge](https://anaconda.org/bioconda/skder/badges/version.svg)](https://anaconda.org/bioconda/skder)
-[![Anaconda-Server Badge](https://anaconda.org/bioconda/skder/badges/platforms.svg)](https://anaconda.org/bioconda/skder)
+[![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat)](http://bioconda.github.io/recipes/skder/README.html) [![Conda](https://img.shields.io/conda/dn/bioconda/skder.svg)](https://anaconda.org/bioconda/skder/files)
 [![Anaconda-Server Badge](https://anaconda.org/bioconda/skder/badges/latest_release_date.svg)](https://anaconda.org/bioconda/skder)
-[![Anaconda-Server Badge](https://anaconda.org/bioconda/skder/badges/downloads.svg)](https://anaconda.org/bioconda/skder)
+[![Anaconda-Server Badge](https://anaconda.org/bioconda/skder/badges/platforms.svg)](https://anaconda.org/bioconda/skder)
+[![Anaconda-Server Badge](https://anaconda.org/bioconda/skder/badges/license.svg)](https://anaconda.org/bioconda/skder)
 
 skDER: efficient & high-resolution dereplication of microbial genomes to select representatives for comparative genomics and metagenomics. 
 
-***Note:*** Please make sure to use version 1.0.7 or greater to avoid a bug in previous versions!
+> ***Note:*** Please make sure to use version 1.0.7 or greater to avoid a bug in previous versions!
 
 **Contents**
 
@@ -21,7 +21,7 @@ skDER: efficient & high-resolution dereplication of microbial genomes to select 
 7. [Usage](#usage)
 8. [Citation notice](#citation-notice)
 9. [Representative genomes for select bacterial taxa](https://zenodo.org/records/10041203)
-    
+
 <img src="https://raw.githubusercontent.com/raufs/skDER/main/images/Logo.png" alt="drawing" width="300"/>
 
 ## Installation
@@ -117,6 +117,8 @@ bash ./run_tests.sh
 
 ## Usage
 
+> If experiencing issues related to "Argument list too long", consider issuing `ulimit -S -s unlimited` prior to running skDER.
+
 ```bash
 # the skder executable should be in the path after installation and can be reference as such:
 skder -h
@@ -125,24 +127,25 @@ skder -h
 The help function should return the following:
 
 ```
-usage: skder [-h] [-g GENOMES [GENOMES ...]] [-t TAXA_NAME] -o OUTPUT_DIRECTORY [-d DEREPLICATION_MODE] [-i PERCENT_IDENTITY_CUTOFF] [-f ALIGNED_FRACTION_CUTOFF] [-a MAX_AF_DISTANCE_CUTOFF]
-             [-p SKANI_TRIANGLE_PARAMETERS] [-c CPUS] [-s] [-n] [-l] [-x] [-v]
+usage: skder [-h] [-g GENOMES [GENOMES ...]] [-t TAXA_NAME] -o OUTPUT_DIRECTORY [-d DEREPLICATION_MODE]
+             [-i PERCENT_IDENTITY_CUTOFF] [-f ALIGNED_FRACTION_CUTOFF] [-a MAX_AF_DISTANCE_CUTOFF] [-p SKANI_TRIANGLE_PARAMETERS]
+             [-c CPUS] [-s] [-n] [-l] [-x] [-u] [-v]
 
-	Program: skder
-	Author: Rauf Salamzade
-	Affiliation: Kalan Lab, UW Madison, Department of Medical Microbiology and Immunology
+        Program: skder
+        Author: Rauf Salamzade
+        Affiliation: Kalan Lab, UW Madison, Department of Medical Microbiology and Immunology
 
-	skDER: efficient & high-resolution dereplication of microbial genomes to select 
-		   representative genomes.
+        skDER: efficient & high-resolution dereplication of microbial genomes to select
+                   representative genomes.
 
-	skDER will perform dereplication of genomes using skani average nucleotide identity 
-	(ANI) and aligned fraction (AF) estimates and either a dynamic programming or 
-	greedy-based based approach. It assesses such pairwise ANI & AF estimates to determine 
-	whether two genomes are similar to each other and then chooses which genome is better 
-	suited to serve as a representative based on assembly N50 (favoring the more contiguous 
-	assembly) and connectedness (favoring genomes deemed similar to a greater number of 
-	alternate genomes).
-	
+        skDER will perform dereplication of genomes using skani average nucleotide identity
+        (ANI) and aligned fraction (AF) estimates and either a dynamic programming or
+        greedy-based based approach. It assesses such pairwise ANI & AF estimates to determine
+        whether two genomes are similar to each other and then chooses which genome is better
+        suited to serve as a representative based on assembly N50 (favoring the more contiguous
+        assembly) and connectedness (favoring genomes deemed similar to a greater number of
+        alternate genomes).
+
 
 options:
   -h, --help            show this help message and exit
@@ -187,6 +190,8 @@ options:
                         support symlink - you can use this flag, but it will create index
                         files for N50 calculations in the same directory as
                         your genomes.
+  -u, --ncbi_nlm_url    Try using the NCBI ftp address with '.nlm' for
+                        ncbi-genome-download if there are issues.
   -v, --version         Report version of skDER.
 ```
 
