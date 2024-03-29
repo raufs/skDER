@@ -2,7 +2,6 @@
 
 [![Preprint](https://img.shields.io/badge/Manuscript-bioRxiv-darkblue?style=flat-square&maxAge=2678400)](https://www.biorxiv.org/content/10.1101/2023.09.27.559801v2)
 [![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat)](http://bioconda.github.io/recipes/skder/README.html) [![Conda](https://img.shields.io/conda/dn/bioconda/skder.svg)](https://anaconda.org/bioconda/skder/files)
-[![Anaconda-Server Badge](https://anaconda.org/bioconda/skder/badges/latest_release_date.svg)](https://anaconda.org/bioconda/skder)
 [![Anaconda-Server Badge](https://anaconda.org/bioconda/skder/badges/platforms.svg)](https://anaconda.org/bioconda/skder)
 [![Anaconda-Server Badge](https://anaconda.org/bioconda/skder/badges/license.svg)](https://anaconda.org/bioconda/skder)
 
