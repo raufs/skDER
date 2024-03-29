@@ -85,6 +85,7 @@ def create_parser():
 	parser.add_argument('-n', '--determine_clusters', action='store_true', help="Perform secondary clustering to assign non-representative\ngenomes to their closest representative genomes.", required=False, default=False)
 	parser.add_argument('-l', '--symlink', action='store_true', help="Symlink representative genomes in results subdirectory\ninstead of performing a copy of the files.", required=False, default=False)
 	parser.add_argument('-x', '--avoid_symlink', action='store_true', help="By default, skDER symlinks input genomes provided by users\ninto the output directory to avoid creating N50 related index files\nin the directory of the original input genomes. If your system doesn't\nsupport symlink - you can use this flag, but it will create index\nfiles for N50 calculations in the same directory as\nyour genomes.", required=False, default=False)
+	parser.add_argument('-u', '--ncbi_nlm_url', action='store_true', help="Try using the NCBI ftp address with '.nlm' for\nncbi-genome-download if there are issues.", required=False, default=False)
 	parser.add_argument('-v', '--version', action='store_true', help="Report version of skDER.", required=False, default=False)
 	args = parser.parse_args()
 	return args
@@ -112,6 +113,11 @@ def skder_main():
 	determine_clusters_flag = myargs.determine_clusters
 	sanity_check = myargs.sanity_check
 	avoid_symlink_flag = myargs.avoid_symlink
+	ncbi_nlm_url_flag = myargs.ncbi_nlm_url
+
+	ngd_url = "https://ftp.ncbi.nih.gov/genomes"
+	if ncbi_nlm_url_flag:
+		ngd_url = "https://ftp.ncbi.nlm.nih.gov/genomes"
 
 	try:
 		assert(selection_mode in set(['dynamic', 'greedy']))
@@ -188,7 +194,7 @@ def skder_main():
 			genome_listing_file = outdir + 'NCBI_Genomes_from_Genbank_for_Taxa.txt'
 			if not os.path.isfile(genome_listing_file):
 				if accession_count != 0:
-					ngd_dry_cmd = ['ncbi-genome-download', '--dry-run', '--section', 'genbank', '-A', genbank_accession_listing_file, 'bacteria', '>', genome_listing_file]
+					ngd_dry_cmd = ['ncbi-genome-download', '--dry-run', '--section', 'genbank', '-u', ngd_url, '-A', genbank_accession_listing_file, 'bacteria', '>', genome_listing_file]
 					util.runCmd(ngd_dry_cmd, logObject, check_files=[genome_listing_file])
 				else:
 					of = open(genome_listing_file, 'w')
@@ -205,8 +211,8 @@ def skder_main():
 				genomes_directory = outdir + 'gtdb_ncbi_genomes/'
 				if not os.path.isfile(all_genomes_listing_file):
 					if genome_count != 0:
-						ngd_real_cmd = ['ncbi-genome-download', '--formats', 'fasta', '--retries', '2', '--section',
-								'genbank', '-A', genbank_accession_listing_file, '-o', genomes_directory, '--flat-output',  'bacteria']
+						ngd_real_cmd = ['ncbi-genome-download', '--formats', 'fasta', '--retries', '2', '--section', 'genbank', '-u', ngd_url,
+							        '-A', genbank_accession_listing_file, '-o', genomes_directory, '--flat-output',  'bacteria']
 						util.runCmd(ngd_real_cmd, logObject, check_directories=[genomes_directory])
 						"""
 						# files get are not uncompressed anymore as of v1.0.9
