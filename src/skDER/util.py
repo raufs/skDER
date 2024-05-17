@@ -2,7 +2,6 @@ import os
 import sys
 import logging
 import traceback
-import shutil
 import pyfastx
 import subprocess
 from Bio import SeqIO
@@ -96,15 +95,29 @@ def is_fasta(fasta):
 	except:
 		return False
 
+# Yield successive n-sized 
+# chunks from l. 
+def divide_chunks(l, n): 
+	# function taken from: https://www.geeksforgeeks.org/break-list-chunks-size-n-python/
+	# looping till length l 
+	for i in range(0, len(l), n):
+		yield l[i:i + n]
+
 def compute_n50(inputs):
 	"""
 	Uses pyfastx
 	"""
-	input_fasta, output_file = inputs
-	fa = pyfastx.Fasta(input_fasta, build_index=True)
-	n50, _ = fa.nl(50)
+	input_fastas, output_file = inputs
 	output_handle = open(output_file, 'w')
-	output_handle.write(input_fasta + '\t' + str(n50) + '\n')
+	for input_fasta in input_fastas:
+		fa = pyfastx.Fasta(input_fasta, build_index=True)
+		n50, _ = fa.nl(50)
+		try:
+			index_file = input_fasta + '.fxi'
+			os.remove(index_file)
+		except:
+			pass
+		output_handle.write(input_fasta + '\t' + str(n50) + '\n')
 	output_handle.close()
 
 def multiProcess(inputs):

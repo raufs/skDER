@@ -126,25 +126,24 @@ skder -h
 The help function should return the following:
 
 ```
-usage: skder [-h] [-g GENOMES [GENOMES ...]] [-t TAXA_NAME] -o OUTPUT_DIRECTORY [-d DEREPLICATION_MODE]
-             [-i PERCENT_IDENTITY_CUTOFF] [-f ALIGNED_FRACTION_CUTOFF] [-a MAX_AF_DISTANCE_CUTOFF] [-p SKANI_TRIANGLE_PARAMETERS]
-             [-c CPUS] [-s] [-n] [-l] [-x] [-u] [-v]
+usage: skder [-h] [-g GENOMES [GENOMES ...]] [-t TAXA_NAME] [-r GTDB_RELEASE] -o OUTPUT_DIRECTORY [-d DEREPLICATION_MODE] [-i PERCENT_IDENTITY_CUTOFF] [-f ALIGNED_FRACTION_CUTOFF]
+             [-a MAX_AF_DISTANCE_CUTOFF] [-p SKANI_TRIANGLE_PARAMETERS] [-c CPUS] [-s] [-n] [-l] [-u] [-v]
 
-        Program: skder
-        Author: Rauf Salamzade
-        Affiliation: Kalan Lab, UW Madison, Department of Medical Microbiology and Immunology
+	Program: skder
+	Author: Rauf Salamzade
+	Affiliation: Kalan Lab, UW Madison, Department of Medical Microbiology and Immunology
 
-        skDER: efficient & high-resolution dereplication of microbial genomes to select
-                   representative genomes.
+	skDER: efficient & high-resolution dereplication of microbial genomes to select 
+		   representative genomes.
 
-        skDER will perform dereplication of genomes using skani average nucleotide identity
-        (ANI) and aligned fraction (AF) estimates and either a dynamic programming or
-        greedy-based based approach. It assesses such pairwise ANI & AF estimates to determine
-        whether two genomes are similar to each other and then chooses which genome is better
-        suited to serve as a representative based on assembly N50 (favoring the more contiguous
-        assembly) and connectedness (favoring genomes deemed similar to a greater number of
-        alternate genomes).
-
+	skDER will perform dereplication of genomes using skani average nucleotide identity 
+	(ANI) and aligned fraction (AF) estimates and either a dynamic programming or 
+	greedy-based based approach. It assesses such pairwise ANI & AF estimates to determine 
+	whether two genomes are similar to each other and then chooses which genome is better 
+	suited to serve as a representative based on assembly N50 (favoring the more contiguous 
+	assembly) and connectedness (favoring genomes deemed similar to a greater number of 
+	alternate genomes).
+	
 
 options:
   -h, --help            show this help message and exit
@@ -155,6 +154,8 @@ options:
   -t TAXA_NAME, --taxa_name TAXA_NAME
                         Genus or species identifier from GTDB (currently R214)
                         for which to download genomes for [Optional].
+  -r GTDB_RELEASE, --gtdb_release GTDB_RELEASE
+                        Which GTDB release to use if -t argument issued [Default is R220].
   -o OUTPUT_DIRECTORY, --output_directory OUTPUT_DIRECTORY
                         Output directory.
   -d DEREPLICATION_MODE, --dereplication_mode DEREPLICATION_MODE
@@ -183,12 +184,6 @@ options:
                         genomes to their closest representative genomes.
   -l, --symlink         Symlink representative genomes in results subdirectory
                         instead of performing a copy of the files.
-  -x, --avoid_symlink   By default, skDER symlinks input genomes provided by users
-                        into the output directory to avoid creating N50 related index files
-                        in the directory of the original input genomes. If your system doesn't
-                        support symlink - you can use this flag, but it will create index
-                        files for N50 calculations in the same directory as
-                        your genomes.
   -u, --ncbi_nlm_url    Try using the NCBI ftp address with '.nlm' for
                         ncbi-genome-download if there are issues.
   -v, --version         Report version of skDER.

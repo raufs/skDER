@@ -47,11 +47,13 @@ import argparse
 import gzip
 from collections import defaultdict
 import pkg_resources
+import math
 import multiprocessing
 
 version = pkg_resources.require("skDER")[0].version
 
 ACCEPTED_SUFFICES = set(['fasta', 'fas', 'fna', 'fa'])
+VALID_GTDB_RELEASES = set(['R214', 'R220'])
 
 def create_parser():
 	""" Parse arguments """
@@ -73,7 +75,8 @@ def create_parser():
 	""", formatter_class=argparse.RawTextHelpFormatter)
 
 	parser.add_argument('-g', '--genomes', nargs='+', help='Genome assembly files in (gzipped) FASTA format\n(accepted suffices are: *.fasta,\n*.fa, *.fas, or *.fna) [Optional].', required=False, default=[])
-	parser.add_argument('-t', '--taxa_name', help='Genus or species identifier from GTDB (currently R214)\nfor which to download genomes for [Optional].', required=False, default=None)
+	parser.add_argument('-t', '--taxa_name', help='Genus or species identifier from GTDB for which to\ndownload genomes for and include in\ndereplication analysis [Optional].', required=False, default=None)
+	parser.add_argument('-r', '--gtdb_release', help='Which GTDB release to use if -t argument issued [Default is R220].', default="R220")
 	parser.add_argument('-o', '--output_directory', help='Output directory.', required=True)
 	parser.add_argument('-d', '--dereplication_mode', help='Whether to use a "dynamic" (more concise) or "greedy" (more\ncomprehensive) approach to selecting representative genomes.\n[Default is "dynamic"]', required=False, default="dynamic")
 	parser.add_argument('-i', '--percent_identity_cutoff', type=float, help="ANI cutoff for dereplication [Default is 99.0].", required=False, default=99.0)
@@ -84,7 +87,6 @@ def create_parser():
 	parser.add_argument('-s', '--sanity_check', action='store_true', help="Confirm each FASTA file provided or downloaded is actually\na FASTA file. Makes it slower, but generally\ngood practice.", required=False, default=False)
 	parser.add_argument('-n', '--determine_clusters', action='store_true', help="Perform secondary clustering to assign non-representative\ngenomes to their closest representative genomes.", required=False, default=False)
 	parser.add_argument('-l', '--symlink', action='store_true', help="Symlink representative genomes in results subdirectory\ninstead of performing a copy of the files.", required=False, default=False)
-	parser.add_argument('-x', '--avoid_symlink', action='store_true', help="By default, skDER symlinks input genomes provided by users\ninto the output directory to avoid creating N50 related index files\nin the directory of the original input genomes. If your system doesn't\nsupport symlink - you can use this flag, but it will create index\nfiles for N50 calculations in the same directory as\nyour genomes.", required=False, default=False)
 	parser.add_argument('-u', '--ncbi_nlm_url', action='store_true', help="Try using the NCBI ftp address with '.nlm' for\nncbi-genome-download if there are issues.", required=False, default=False)
 	parser.add_argument('-v', '--version', action='store_true', help="Report version of skDER.", required=False, default=False)
 	args = parser.parse_args()
@@ -102,6 +104,7 @@ def skder_main():
 	taxa_name = None
 	if myargs.taxa_name:
 		taxa_name = myargs.taxa_name.strip('"')
+	gtdb_release = myargs.gtdb_release.upper()
 	outdir = os.path.abspath(myargs.output_directory) + '/'
 	selection_mode = myargs.dereplication_mode.lower()
 	percent_identity_cutoff = myargs.percent_identity_cutoff
@@ -112,7 +115,6 @@ def skder_main():
 	symlink_flag = myargs.symlink
 	determine_clusters_flag = myargs.determine_clusters
 	sanity_check = myargs.sanity_check
-	avoid_symlink_flag = myargs.avoid_symlink
 	ncbi_nlm_url_flag = myargs.ncbi_nlm_url
 
 	ngd_url = "https://ftp.ncbi.nih.gov/genomes"
@@ -123,6 +125,12 @@ def skder_main():
 		assert(selection_mode in set(['dynamic', 'greedy']))
 	except:
 		sys.stderr.write('Selection mode requested not valid, must be either "greedy" or  "dynamic".')
+		sys.exit(1)
+
+	try:
+		assert(gtdb_release in VALID_GTDB_RELEASES)
+	except:
+		sys.stderr.write('GTDB release requested is not valid. Valid options include: %s\n' % ' '.join(VALID_GTDB_RELEASES))
 		sys.exit(1)
 
 	if os.path.isdir(outdir):
@@ -160,13 +168,13 @@ def skder_main():
 		# if requested.
 		sys.stdout.write("GTDB listing file not available, using wget to download it.\n")
 		logObject.info("\nGTDB listing file not available, using wget to download it.")
-		wget_cmd = ['wget', 'https://github.com/Kalan-Lab/lsaBGC/raw/main/db/GTDB_R214_Information.txt.gz', '-P', outdir]
-		gtdb_listing_file = outdir + "GTDB_R214_Information.txt.gz"
+		wget_cmd = ['wget', 'https://github.com/raufs/gtdb_gca_to_taxa_mappings/raw/main/GTDB_' + gtdb_release + '_Information.txt.gz', '-P', outdir]
+		gtdb_listing_file = outdir + "GTDB_" + gtdb_release + "_Information.txt.gz"
 		util.runCmd(wget_cmd, logObject, check_files=[gtdb_listing_file])
 
 		genbank_accession_listing_file = outdir + 'NCBI_Genbank_Accession_Listing.txt'
-		sys.stdout.write("--------------------\nStep 0\n--------------------\nBeginning by assessing which genomic assemblies are available for the taxa %s in GTDB and NCBI's GenBank db\n" % taxa_name)
-		logObject.info("\n--------------------\nStep 0\n--------------------\nBeginning by assessing which genomic assemblies are available for the taxa %s in GTDB and NCBI's GenBank db" % taxa_name)
+		sys.stdout.write("--------------------\nStep 0\n--------------------\nBeginning by assessing which genomic assemblies are available for the taxa %s in GTDB %s\n" % (taxa_name, gtdb_release))
+		logObject.info("\n--------------------\nStep 0\n--------------------\nBeginning by assessing which genomic assemblies are available for the taxa %s in GTDB %s" % (taxa_name, gtdb_release))
 
 		if not os.path.isfile(genbank_accession_listing_file):
 			genbank_accession_listing_handle = open(genbank_accession_listing_file, 'w')
@@ -214,16 +222,7 @@ def skder_main():
 						ngd_real_cmd = ['ncbi-genome-download', '--formats', 'fasta', '--retries', '2', '--section', 'genbank', '-u', ngd_url,
 							        '-A', genbank_accession_listing_file, '-o', genomes_directory, '--flat-output',  'bacteria']
 						util.runCmd(ngd_real_cmd, logObject, check_directories=[genomes_directory])
-						"""
-						# files get are not uncompressed anymore as of v1.0.9
-						uncompress_cmds = []
-						for f in os.listdir(genomes_directory):
-							uncompress_cmds.append(['gunzip', genomes_directory + f])#, logObject])
-						
-						p = multiprocessing.Pool(cpus)
-						p.map(util.multiProcess, uncompress_cmds)
-						p.close()
-						"""
+
 						gca_to_species_name = {}
 						with gzip.open(gtdb_listing_file, 'rt') as ogtdb:
 								for line in ogtdb:
@@ -260,12 +259,7 @@ def skder_main():
 			if not suffix in ACCEPTED_SUFFICES: continue
 			if sanity_check:
 				assert(util.is_fasta(gf))
-			if avoid_symlink_flag:
-				gf_listing_handle.write(gf + '\n')
-			else:
-				sl_gf = symlink_genomes_directory + gf.split('/')[-1]
-				os.symlink(gf, sl_gf)
-				gf_listing_handle.write(sl_gf + '\n')
+			gf_listing_handle.write(gf + '\n')
 		gf_listing_handle.close()
 
 	number_of_genomes = None
@@ -280,14 +274,23 @@ def skder_main():
 		sys.exit(1)
 
 	# calculate N50s
-	n50_dir = outdir + 'Assembly_N50s/'
-	util.setupDirectories([n50_dir])
-	n50_inputs = []
+	genomes = []
 	with open(all_genomes_listing_file) as oaglf:
 		for line in oaglf:
 			genome_path = line.strip()
-			genome_file = genome_path.split('/')[-1]
-			n50_inputs.append([genome_path, n50_dir + genome_file + '_n50.txt'])
+			genomes.append(genome_path)
+
+	genome_count = len(genomes)
+	chunk_size = math.ceil(genome_count/cpus)
+	genome_chunks = util.divide_chunks(genomes, chunk_size)
+
+	n50_dir = outdir + 'Assembly_N50s/'
+	util.setupDirectories([n50_dir])
+	n50_inputs = []
+	for i, gc in enumerate(genome_chunks):
+		n50_chunk_file = n50_dir + 'chunk_' + str(i) + '.txt'
+		n50_inputs.append([gc, n50_chunk_file])
+
 	p = multiprocessing.Pool(cpus)
 	p.map(util.compute_n50, n50_inputs)
 	p.close()
@@ -295,6 +298,9 @@ def skder_main():
 	# concatenate N50 results into a single file
 	concat_n50_result_file = outdir + 'Concatenated_N50.txt'
 	os.system('time find %s -maxdepth 1 -type f | xargs cat >> %s' % (n50_dir, concat_n50_result_file))
+
+	# remove the directory with N50 stats after concatenating info into a single file.
+	shutil.rmtree(n50_dir)
 
 	# run skani triangle
 	skani_result_file = outdir + 'Skani_Triangle_Edge_Output.txt'
