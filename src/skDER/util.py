@@ -120,6 +120,9 @@ def compute_n50(inputs):
 		try:
 			index_file = genome_file + '.fxi'
 			os.remove(index_file)
+			if index_locally_flag:
+				assert(input_fasta != genome_file)
+				os.remove(genome_file)
 		except:
 			pass
 		output_handle.write(input_fasta + '\t' + str(n50) + '\n')
