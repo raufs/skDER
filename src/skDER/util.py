@@ -107,13 +107,18 @@ def compute_n50(inputs):
 	"""
 	Uses pyfastx
 	"""
-	input_fastas, output_file = inputs
+	input_fastas, output_file, index_locally_flag = inputs
 	output_handle = open(output_file, 'w')
 	for input_fasta in input_fastas:
-		fa = pyfastx.Fasta(input_fasta, build_index=True)
+		genome_file = input_fasta
+		if index_locally_flag:
+			local_file = '/'.join(os.path.abspath(output_file).split('/')[:-1]) + '/' + '.'.join(input_fasta.split('/')[-1].split('.')[:-1]) + '.fasta'
+			os.symlink(input_fasta, local_file)
+			genome_file = local_file
+		fa = pyfastx.Fasta(genome_file, build_index=True)
 		n50, _ = fa.nl(50)
 		try:
-			index_file = input_fasta + '.fxi'
+			index_file = genome_file + '.fxi'
 			os.remove(index_file)
 		except:
 			pass
