@@ -127,7 +127,7 @@ The help function should return the following:
 
 ```
 usage: skder [-h] [-g GENOMES [GENOMES ...]] [-t TAXA_NAME] [-r GTDB_RELEASE] -o OUTPUT_DIRECTORY [-d DEREPLICATION_MODE] [-i PERCENT_IDENTITY_CUTOFF] [-f ALIGNED_FRACTION_CUTOFF]
-             [-a MAX_AF_DISTANCE_CUTOFF] [-p SKANI_TRIANGLE_PARAMETERS] [-c CPUS] [-s] [-n] [-l] [-u] [-v]
+             [-a MAX_AF_DISTANCE_CUTOFF] [-p SKANI_TRIANGLE_PARAMETERS] [-c CPUS] [-s] [-n] [-l] [-b] [-u] [-v]
 
 	Program: skder
 	Author: Rauf Salamzade
@@ -152,8 +152,9 @@ options:
                         (accepted suffices are: *.fasta,
                         *.fa, *.fas, or *.fna) [Optional].
   -t TAXA_NAME, --taxa_name TAXA_NAME
-                        Genus or species identifier from GTDB (currently R214)
-                        for which to download genomes for [Optional].
+                        Genus or species identifier from GTDB for which to
+                        download genomes for and include in
+                        dereplication analysis [Optional].
   -r GTDB_RELEASE, --gtdb_release GTDB_RELEASE
                         Which GTDB release to use if -t argument issued [Default is R220].
   -o OUTPUT_DIRECTORY, --output_directory OUTPUT_DIRECTORY
@@ -184,6 +185,7 @@ options:
                         genomes to their closest representative genomes.
   -l, --symlink         Symlink representative genomes in results subdirectory
                         instead of performing a copy of the files.
+  -b, --index_locally   Build indices locally instead of in the directory of input genomes.
   -u, --ncbi_nlm_url    Try using the NCBI ftp address with '.nlm' for
                         ncbi-genome-download if there are issues.
   -v, --version         Report version of skDER.
