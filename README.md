@@ -83,7 +83,7 @@ Here is an overview of the algorithm:
 >- Comprehensive clustering of all proteins using CD-HIT (default options: )
 >- Select genome with the most number of distinct protein clusters as the initial representative.
 >- Iteratively add more representative genomes one at a time, selecting the next based on maximized addition of novel protein clusters to the current representative set.
->- End addition of representative genomes if one of three criteria are met: (i) Next genome adds less than X number of distinct protein clusters (X is by default 0), (ii) over Y% of the total distinct protein clusters across all genomes are found in the so-far selected reprsentative genomes (default is 90%), or (iii) over Z% of the total distinct multi-genome protein clusters across all genomes are found in the so-far selected representative genomes.
+>- End addition of representative genomes if one of three criteria are met: (i) Next genome adds less than X number of distinct protein clusters (X is by default 0), (ii) over Y% of the total distinct protein clusters across all genomes are found in the so-far selected reprsentative genomes (Y is by default 90%), or (iii) over Z% of the total distinct multi-genome protein clusters across all genomes are found in the so-far selected representative genomes (Z is by default 100%). Thus, by default, only Y is used for representative genome selection. 
 
 ### Using the Dynamic Programming Dereplication Approach (skDER)
 
