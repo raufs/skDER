@@ -28,7 +28,12 @@ requirements:
     - skani
     - ncbi-genome-download
     - pyfastx
-
+    - seaborn
+    - matplotlib
+    - pyrodigal
+    - cd-hit
+    - pandas
+    
 test:
   commands:
     - skDER -h

@@ -1,0 +1,440 @@
+#!/usr/bin/env python3
+
+### Program: cidder
+### Author: Rauf Salamzade
+### Kalan Lab
+### UW Madison, Department of Medical Microbiology and Immunology
+
+# BSD 3-Clause License
+#
+# Copyright (c) 2024, Rauf Salamzade
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
+import os
+import sys
+from skDER import util
+import shutil
+from time import sleep
+import argparse
+import gzip
+from collections import defaultdict
+import pkg_resources
+import multiprocessing
+import traceback
+from Bio import SeqIO
+from operator import itemgetter
+
+version = pkg_resources.require("skDER")[0].version
+
+ACCEPTED_SUFFICES = set(['fasta', 'fas', 'fna', 'fa'])
+VALID_GTDB_RELEASES = set(['R214', 'R220'])
+
+def create_parser():
+	""" Parse arguments """
+	parser = argparse.ArgumentParser(description="""
+	Program: geneder
+	Author: Rauf Salamzade
+	Affiliation: Kalan Lab, UW Madison, Department of Medical Microbiology and Immunology
+
+	CiDDER: Performs genome dereplication based on CD-HIT clustering of proteins to 
+			select a representative set of genomes which adequately samples the 
+			pangenome space. Because gene prediction is performed using pyrodigal, 
+			geneder only works for bacterial genomes at the moment. 
+								  
+	The general algorithm is to first select the genome with the most number of distinct 
+	open-reading-frames (ORFS; predicted genes) and then iteratively add genomes based on 
+	which maximizes the number of new ORFs. This iterative addition of selected genomes
+	is performed until: (i) the next genome to add does not have a minimum of X new disintct 
+	ORFs to add to the set of ORFs belonging, (ii) some percentage Y of the total distinct 
+	ORFs are found to have been sampled, or (iii) some percentage Z of the total multi-genome
+	distinct ORFs are found to have been sampled. The "added-on" genomes from the iterative 
+	procedure are listed as representative genomes.  
+								  
+	For information on how to alter CD-HIT parameters, please see: 
+	https://github.com/weizhongli/cdhit/blob/master/doc/cdhit-user-guide.wiki#cd-hit
+	""", formatter_class=argparse.RawTextHelpFormatter)
+
+	parser.add_argument('-g', '--genomes', nargs='+', help='Genome assembly files in (gzipped) FASTA format\n(accepted suffices are: *.fasta,\n*.fa, *.fas, or *.fna) [Optional].', required=False, default=[])
+	parser.add_argument('-t', '--taxa-name', help='Genus or species identifier from GTDB for which to\ndownload genomes for and include in\ndereplication analysis [Optional].', required=False, default=None)
+	parser.add_argument('-r', '--gtdb-release', help='Which GTDB release to use if -t argument issued [Default is R220].', default="R220")
+	parser.add_argument('-o', '--output-directory', help='Output directory.', required=True)
+	parser.add_argument('-p', '--cd-hit-params', help="CD-HIT parameters to use for clustering proteins - select carefully\n(also controls memory via the -M argument, but don't set threads - that\nis done by default in cidder) and surround by quotes\n[Default is: \"-n 5 -c 95.0 -aL 0.75 -aS 0.90 -M 4000\"]", required=False, default="")
+	parser.add_argument('-m', '--metagenome-mode', action='store_true', help="Run pyrodigal using metagenome mode [Default is False].",  required=False, default=False)
+	parser.add_argument('-e', '--include-edge-orfs', action='store_true', help="Include proteins from ORFs that hang off the edge of a contig/scaffold\n[Default is False].", required=False, default=False)
+	parser.add_argument('-n', '--new-proteins-needed', type=int, help="The number of new protein clusters needed to add [Default is 0].", required=False, default=0)
+	parser.add_argument('-ts', '--total-saturation', type=float, help="The percentage of total proteins clusters needed to stop representative\ngenome selection [Default is 90.0].", required=False, default=90.0)
+	parser.add_argument('-mgs', '--multi-genome-saturation', type=float, help="The percentage of total multi-genome protein clusters needed to stop\nrepresentative genome selection [Default is 100.0].", required=False, default=100.0)
+	parser.add_argument('-s', '--sanity_check', action='store_true', help="Confirm each FASTA file provided or downloaded is actually\na FASTA file. Makes it slower, but generally\ngood practice.", required=False, default=False)
+	parser.add_argument('-l', '--symlink', action='store_true', help="Symlink representative genomes in results subdirectory\ninstead of performing a copy of the files.", required=False, default=False)
+	parser.add_argument('-c', '--cpus', type=int, help="Number of CPUs to use.", required=False, default=1)
+	parser.add_argument('-u', '--ncbi_nlm_url', action='store_true', help="Try using the NCBI ftp address with '.nlm' for\nncbi-genome-download if there are issues.", required=False, default=False)
+	parser.add_argument('-v', '--version', action='store_true', help="Report version of CiDDER.", required=False, default=False)
+	args = parser.parse_args()
+	return args
+
+def skder_main():
+	if len(sys.argv)>1 and ('-v' in set(sys.argv) or '--version' in set(sys.argv)):
+		sys.stderr.write('Version of CiDDER (skDER pacakge) being used is: ' + str(version) + '\n')
+		sys.exit(0)
+	
+	# Parse arguments
+	myargs = create_parser()
+
+	genomes = myargs.genomes
+	taxa_name = None
+	if myargs.taxa_name:
+		taxa_name = myargs.taxa_name.strip('"')
+	gtdb_release = myargs.gtdb_release.upper()
+	outdir = os.path.abspath(myargs.output_directory) + '/'
+	cd_hit_params = myargs.cd_hit_params
+	metagenome_mode = myargs.metagenome_mode
+	include_edge_orfs = myargs.include_edge_orfs
+	new_proteins_needed = myargs.new_proteins_needed
+	saturation_cutoff = myargs.total_saturation
+	multigenome_saturation_cutoff = myargs.multi_genome_saturation
+	sanity_check = myargs.sanity_check
+	symlink = myargs.symlink
+	cpus = myargs.cpus
+	ncbi_nlm_url_flag = myargs.ncbi_nlm_url
+
+	ngd_url = "https://ftp.ncbi.nih.gov/genomes"
+	if ncbi_nlm_url_flag:
+		ngd_url = "https://ftp.ncbi.nlm.nih.gov/genomes"
+
+	try:
+		assert(gtdb_release in VALID_GTDB_RELEASES)
+	except:
+		sys.stderr.write('GTDB release requested is not valid. Valid options include: %s\n' % ' '.join(VALID_GTDB_RELEASES))
+		sys.exit(1)
+
+	if os.path.isdir(outdir):
+		sys.stderr.write("Output directory already exists! Overwriting in 5 seconds, but only where needed will use checkpoint files to skip certain steps...\n")
+		sleep(5)
+
+	util.setupDirectories([outdir])
+
+	# Create logging object
+	log_file = outdir + 'Progress.log'
+	logObject = util.createLoggerObject(log_file)
+	parameters_file = outdir + 'Command_Issued.txt'
+	sys.stdout.write('Running CiDDER (skDER pacakge) version %s\n' % version)
+	sys.stdout.write("Appending command issued for future records to: %s\n" % parameters_file)
+	sys.stdout.write("Logging more details at: %s\n" % log_file)
+	logObject.info("\nNEW RUN!!!\n**************************************")
+	logObject.info('Running CiDDER (skDER pacakge) version %s' % version)
+	logObject.info("Appending command issued for future records to: %s" % parameters_file)
+
+	parameters_handle = open(parameters_file, 'a+')
+	parameters_handle.write(' '.join(sys.argv) + '\n')
+	parameters_handle.close()
+
+	all_genomes_listing_file = outdir + 'All_Genomes_Listing.txt'
+
+	if taxa_name != "None" and taxa_name != None:
+		# Step 0: Download GTDB listing file from lsaBGC git repo, parse GTDB information 
+		# file, get list of Genbank accessions, and perform dry-run with ncbi-genome-download 
+		# if requested.
+		sys.stdout.write("GTDB listing file not available, using wget to download it.\n")
+		logObject.info("\nGTDB listing file not available, using wget to download it.")
+		wget_cmd = ['wget', 'https://github.com/raufs/gtdb_gca_to_taxa_mappings/raw/main/GTDB_' + gtdb_release + '_Information.txt.gz', '-P', outdir]
+		gtdb_listing_file = outdir + "GTDB_" + gtdb_release + "_Information.txt.gz"
+		util.runCmd(wget_cmd, logObject, check_files=[gtdb_listing_file])
+
+		genbank_accession_listing_file = outdir + 'NCBI_Genbank_Accession_Listing.txt'
+		sys.stdout.write("--------------------\nStep 0\n--------------------\nBeginning by assessing which genomic assemblies are available for the taxa %s in GTDB %s\n" % (taxa_name, gtdb_release))
+		logObject.info("\n--------------------\nStep 0\n--------------------\nBeginning by assessing which genomic assemblies are available for the taxa %s in GTDB %s" % (taxa_name, gtdb_release))
+
+		if not os.path.isfile(genbank_accession_listing_file):
+			genbank_accession_listing_handle = open(genbank_accession_listing_file, 'w')
+			with gzip.open(gtdb_listing_file, 'rt') as ogtdb:
+				for line in ogtdb:
+					line = line.strip('\n')
+					ls = line.split('\t')
+					if ls[0] == 'none': continue
+					if len(taxa_name.split()) == 1:
+						if ls[1] == taxa_name:
+							genbank_accession_listing_handle.write(ls[0] + '\n')
+					elif len(taxa_name.split()) == 2:
+						if ls[2] == taxa_name:
+							genbank_accession_listing_handle.write(ls[0] + '\n')
+			genbank_accession_listing_handle.close()
+
+		ogalf = open(genbank_accession_listing_file)
+		accession_count = len(ogalf.readlines())
+		ogalf.close()
+
+		if accession_count == 0:
+			sys.stderr.write('Warning: no genomes found to belong the genus or species specified in GTDB.\n')
+			logObject.info('Warning: no genomes found to belong the genus or species specified in GTDB.')
+		else:
+			genome_listing_file = outdir + 'NCBI_Genomes_from_Genbank_for_Taxa.txt'
+			if not os.path.isfile(genome_listing_file):
+				if accession_count != 0:
+					ngd_dry_cmd = ['ncbi-genome-download', '--dry-run', '--section', 'genbank', '-u', ngd_url, '-A', genbank_accession_listing_file, 'bacteria', '>', genome_listing_file]
+					util.runCmd(ngd_dry_cmd, logObject, check_files=[genome_listing_file])
+				else:
+					of = open(genome_listing_file, 'w')
+					of.close()
+
+			oglf = open(genome_listing_file)
+			genome_count = len(oglf.readlines())
+			oglf.close()
+			if genome_count == 0:
+				sys.stderr.write('Warning: no genomes could be downloaded with ncbi-genome-download.\n')
+				logObject.info('Warning: no genomes could be downloaded with ncbi-genome-download.')
+			else:
+				# Download all genomes in FASTA format & prodigal gene calling
+				genomes_directory = outdir + 'gtdb_ncbi_genomes/'
+				if not os.path.isfile(all_genomes_listing_file):
+					if genome_count != 0:
+						ngd_real_cmd = ['ncbi-genome-download', '--formats', 'fasta', '--retries', '2', '--section', 'genbank', '-u', ngd_url,
+							        '-A', genbank_accession_listing_file, '-o', genomes_directory, '--flat-output',  'bacteria']
+						util.runCmd(ngd_real_cmd, logObject, check_directories=[genomes_directory])
+
+						gca_to_species_name = {}
+						with gzip.open(gtdb_listing_file, 'rt') as ogtdb:
+								for line in ogtdb:
+									line = line.strip('\n')
+									ls = line.split('\t')
+									if ls[0] == 'none': continue
+									gca = ls[0]
+									sp_name = '_'.join(ls[2].split())
+									gca_to_species_name[gca] = sp_name
+									
+						gf_listing_handle = open(all_genomes_listing_file, 'a+')
+						for gf in os.listdir(genomes_directory):
+							gfile = genomes_directory + gf 
+							suffix = '.gz'.join(gf.split('.gz')[:-1]).split('.')[-1].lower()
+							if not suffix in ACCEPTED_SUFFICES: continue
+							if sanity_check:
+								assert (util.is_fasta(gfile))
+							gca = '_'.join(gf.split('_')[:2])
+							species_name = gca_to_species_name[gca]
+							renamed_gfile = genomes_directory + species_name + '_' + gca + '.fasta.gz'
+							os.rename(gfile, renamed_gfile)
+							gf_listing_handle.write(renamed_gfile + '\n')
+						gf_listing_handle.close()
+
+	if genomes:
+		symlink_genomes_directory = outdir + 'local_genomes/' 
+		util.setupDirectories([symlink_genomes_directory])
+		gf_listing_handle = open(all_genomes_listing_file, 'a+')
+		for gf in genomes:
+			gf = os.path.abspath(gf)
+			suffix = gf.split('.')[-1].lower()
+			if gf.endswith('.gz'):
+				suffix = '.gz'.join(gf.split('.gz')[:-1]).split('.')[-1].lower()
+			if not suffix in ACCEPTED_SUFFICES: continue
+			if sanity_check:
+				assert(util.is_fasta(gf))
+			gf_listing_handle.write(gf + '\n')
+		gf_listing_handle.close()
+
+	pyrodigal_resdir = outdir + 'pyrodigal_results/'
+	util.setupDirectories([pyrodigal_resdir])
+
+	# Run pyrodigal for gene calling
+	number_of_genomes = None
+	pyrodigal_cmds = []
+	genome_name_to_path = {}
+	try:
+		assert(os.path.isfile(all_genomes_listing_file))
+		number_of_genomes = 0
+		genome_names = set([])
+		with open(all_genomes_listing_file) as oaglf:
+			for line in oaglf:
+				genome_path = line.strip()
+				genome_name = '.'.join(line.split('/')[-1].split('.')[:-1])
+				genome_name_to_path[genome_name] = genome_path
+				genome_names.add(genome_name) 
+				result_path = pyrodigal_resdir + genome_name + '.faa'
+				pyrodigal_cmd = ['pyrodigal', '-i', genome_path, '-a', result_path]
+				if metagenome_mode:
+					pyrodigal_cmd += ['-m']
+				if not include_edge_orfs:
+					pyrodigal_cmd += ['-c']
+				pyrodigal_cmds.append(pyrodigal_cmd)
+				
+				number_of_genomes += 1
+		assert(number_of_genomes >= 2 and number_of_genomes == len(genome_names))
+	except Exception as e:
+		logObject.error('Fewer than 2 genomes downloaded / provided or multiple genome files with the same name but from different directories provided. Exiting ...')
+		sys.stderr.write('Fewer than 2 genomes downloaded / provided or multiple genome files with the same name but from different directories provided. Exiting ...\n')
+		sys.exit(1)
+
+	try:
+		p = multiprocessing.Pool(cpus)
+		p.map(util.multiProcess, pyrodigal_cmds)
+		p.close()
+	except Exception as e:
+		msg = 'Issues with parallel running of pyrodigal commands.'
+		sys.stderr.write(msg + '\n')
+		logObject.error(msg)
+		sys.stderr.write(traceback.format_exc())
+		logObject.error(traceback.format_exc())
+		sys.exit(1)
+
+	number_of_predicted_proteomes = 0
+	combined_proteome_faa = outdir + 'All_Proteins.faa'
+	cpf_handle = open(combined_proteome_faa, 'w')
+	for f in os.listdir(pyrodigal_resdir):
+		genome_name = '.faa'.join(f.split('.faa')[:-1])
+		number_of_predicted_proteomes += 1
+		with open(pyrodigal_resdir + f) as oprf:
+			for rec in SeqIO.parse(oprf, 'fasta'):
+				cpf_handle.write('>' + genome_name + '|' + rec.id + '\n' + str(rec.seq) + '\n')
+	cpf_handle.close()
+				
+	# remove indiividual predicted proteome FASTA files
+	shutil.rmtree(pyrodigal_resdir)
+
+	# run CD-HIT on combined proteomes file
+	cdhit_result_prefix = outdir + 'CD-HIT_clustering.faa'
+	cdhit_cluster_file = cdhit_result_prefix + '.clstr'
+	cdhit_cmd = ['cd-hit', '-d', '0', '-T', str(cpus), cd_hit_params, '-i', combined_proteome_faa, '-o', cdhit_result_prefix]
+	util.runCmd(cdhit_cmd, logObject, check_files=[cdhit_cluster_file])
+
+	# process CD-HIT clustering resulting results
+	genome_protein_clusters = defaultdict(set)
+	cluster_genomes = defaultdict(set)
+	cluster_id = None
+	c_count = 0
+	with open(cdhit_cluster_file) as occf:
+		for line in occf:
+			line = line.strip()
+			if line.startswith('>'):
+				cluster_id = line[1:]
+				c_count += 1
+			else:
+				genome = line.split()[2][1:].split('|')[0]
+				assert(cluster_id != None)
+				genome_protein_clusters[genome].add(cluster_id)
+				cluster_genomes[cluster_id].add(genome)
+
+	multi_genome_clusters = set([])
+	for c in cluster_genomes:
+		if len(cluster_genomes[c]) > 1:
+			multi_genome_clusters.add(c)
+	mgc_count = len(multi_genome_clusters)
+
+	genome_cluster_counts = defaultdict(int)
+	for g in genome_protein_clusters:
+		gpc = len(genome_protein_clusters[g])
+		genome_cluster_counts[genome] = gpc
+
+	# Perform representative genome selection procedure
+	cidder_drep_dir = outdir + 'Dereplicated_Representative_Genomes/'
+	util.setupDirectories([cidder_drep_dir])
+	rep_genomes = set([])
+	rep_genomes_protein_clusters = set([])
+	rep_genomes_multigenome_protein_clusters = set([])
+
+	# First, select (one of) the genome(s) with the most distinct protein clusters.
+	for i, gc in sorted(genome_cluster_counts.items(), key=itemgetter(1), reverse=True):
+		if i == 0: 
+			rep_genomes.add(gc[0])
+			msg = 'Starting genome: %s - %d distinct protein clusters' % (gc[0], gc[1])
+			sys.stdout.write(msg + '\n')
+			logObject.info(msg)
+			genome_path = genome_name_to_path[gc[0]]
+			if symlink:
+				symlink_file = cidder_drep_dir + genome_path.split('/')[-1]
+				os.symlink(genome_path, symlink_file)
+			else:
+				shutil.copy2(genome_path, cidder_drep_dir)
+			rep_genomes_protein_clusters = genome_protein_clusters[gc[0]]
+			rep_genomes_multigenome_protein_clusters = genome_protein_clusters[gc[0]].intersection(multi_genome_clusters)
+
+	curr_saturation = (len(rep_genomes_protein_clusters)/c_count)*100.0
+	curr_multigenome_saturation = (len(rep_genomes_multigenome_protein_clusters)/mgc_count)*100.0
+
+	if curr_saturation >= saturation_cutoff or curr_multigenome_saturation >= multigenome_saturation_cutoff:
+		msg = 'Requirements met! Protein cluster saturation of representative genomes is: %0.2f%%\nMulti-genome protein cluster saturation of representative genomes is  %0.2f%%' % (curr_saturation, curr_multigenome_saturation)
+		sys.stdout.write(msg + '\n')
+		logObject.info(msg)
+	else:
+		# Start iterative process
+		limits_hit = False
+		while not limits_hit:
+			genome_additions = defaultdict(int)
+			for genome in genome_protein_clusters:
+				if genome in rep_genomes: continue
+				novelty_added = len(genome_protein_clusters[genome].difference(rep_genomes_protein_clusters))
+				genome_additions[genome] = novelty_added
+
+			not_enough_new_proteins = False
+			new_rep = None
+			for ga in sorted(genome_additions.items(), key=itemgetter(1), reverse=True):
+				if ga[1] < new_proteins_needed:
+					not_enough_new_proteins = True
+					break
+				else:
+					new_rep = ga[0]
+					break
+
+			if new_rep != None:
+				genome_path = genome_name_to_path[new_rep]
+				if symlink:
+					symlink_file = cidder_drep_dir + genome_path.split('/')[-1]
+					os.symlink(genome_path, symlink_file)
+				else:
+					shutil.copy2(genome_path, cidder_drep_dir)
+				rep_genomes.add(new_rep)
+				rep_genomes_protein_clusters = rep_genomes_protein_clusters.union(genome_protein_clusters[new_rep])
+				rep_genomes_multigenome_protein_clusters = rep_genomes_multigenome_protein_clusters.union(genome_protein_clusters[new_rep].intersection(multi_genome_clusters))
+			
+			curr_saturation = (len(rep_genomes_protein_clusters)/c_count)*100.0
+			curr_multigenome_saturation = (len(rep_genomes_multigenome_protein_clusters)/mgc_count)*100.0
+			
+			if not_enough_new_proteins or curr_saturation >= saturation_cutoff or curr_multigenome_saturation >= multigenome_saturation_cutoff:
+				msg = 'Requirements met! Protein cluster saturation of representative genomes is: %0.2f%%\nMulti-genome protein cluster saturation of representative genomes is %0.2f%%' % (curr_saturation, curr_multigenome_saturation)
+				sys.stdout.write(msg + '\n')
+				logObject.info(msg)
+				limits_hit = True
+
+	msg = 'There were %d representative genomes selected from %d considered!' % (len(rep_genomes), number_of_genomes)
+	sys.stdout.write(msg + '\n')
+	logObject.info(msg)	
+
+	# close logging object and exit
+	logObject.info('******************\nCiDDER finished!\n******************\nDirectory with representative genomes can be found at: %s' % cidder_drep_dir)
+	sys.stdout.write('******************\nCiDER finished!\n******************\nDirectory with representative genomes can be found at: %s\n' % cidder_drep_dir)
+	util.closeLoggerObject(logObject)
+
+	# create completion file for workflows to check
+	completion_file = outdir + 'COMPLETED.txt'
+	os.system('echo "CiDDER completed successfully!" > %s' % completion_file)
+	assert(os.path.isfile(completion_file))
+	sys.exit(0)
+
+if __name__ == '__main__':
+	multiprocessing.set_start_method('fork')
+	skder_main()
