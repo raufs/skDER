@@ -426,7 +426,7 @@ def skder_main():
 
 	# close logging object and exit
 	logObject.info('******************\nCiDDER finished!\n******************\nDirectory with representative genomes can be found at: %s' % cidder_drep_dir)
-	sys.stdout.write('******************\nCiDER finished!\n******************\nDirectory with representative genomes can be found at: %s\n' % cidder_drep_dir)
+	sys.stdout.write('******************\nCiDDER finished!\n******************\nDirectory with representative genomes can be found at: %s\n' % cidder_drep_dir)
 	util.closeLoggerObject(logObject)
 
 	# create completion file for workflows to check
