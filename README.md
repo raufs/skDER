@@ -21,7 +21,7 @@ skDER: efficient & high-resolution dereplication of microbial genomes to select 
 8. [Citation notice](#citation-notice)
 9. [Representative genomes for select bacterial taxa](https://zenodo.org/records/10041203)
 
-<img src="https://raw.githubusercontent.com/raufs/skDER/main/images/Logo.png" alt="drawing" width="300"/> <img src="https://github.com/raufs/skDER/blob/main/images/Logo2.png" alt="drawing" width="200"/> 
+<img src="https://raw.githubusercontent.com/raufs/skDER/main/images/Logo.png" alt="drawing" width="300"/> <img src="https://github.com/raufs/skDER/blob/main/images/Logo2.png" alt="drawing" width="223.5"/> 
 
 ## Installation
 
