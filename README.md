@@ -5,7 +5,7 @@
 [![Anaconda-Server Badge](https://anaconda.org/bioconda/skder/badges/platforms.svg)](https://anaconda.org/bioconda/skder)
 [![Anaconda-Server Badge](https://anaconda.org/bioconda/skder/badges/license.svg)](https://anaconda.org/bioconda/skder)
 
-skDER: efficient & high-resolution dereplication of microbial genomes to select representatives for comparative genomics and metagenomics. 
+skDER (& CIDDER): efficient & high-resolution dereplication of microbial genomes to select representatives for comparative genomics and metagenomics.
 
 > ***Note:*** Please make sure to use version 1.0.7 or greater to avoid a bug in previous versions!
 
@@ -68,7 +68,7 @@ skDER features two distinct algorithms for dereplication (details can be found b
 
 #### CiDDER
 
-In v1.2.0, we also introduced a second program called CiDDER (CD-hit based DEReplication) - which allows for optimizing selection of a minimal number of genomes that achieve some level of saturation of the pan-genome of the full set of genomes (see below for details).
+In v1.2.0, we also introduced a second program called CiDDER (CD-hit based DEReplication) - which allows for optimizing selection of a minimal number of genomes that achieve some level of saturation of the pan-genome of the full set of genomes (see below for details). Note, CD-HIT determines protein clusters, not proper ortholog groups, and as such an approximation is made of the pan-genome space being sampled by representative genomes.
 
 ## Details on Dereplication Algorithms
 
@@ -286,7 +286,7 @@ options:
                         instead of performing a copy of the files.
   -c CPUS, --cpus CPUS  Number of CPUs to use [Default is 1].
   -m MEMORY, --memory MEMORY
-                        The memory limit for CD-HIT in Gigabytes [Default is 4].
+                        The memory limit for CD-HIT in Gigabytes [Default is 0 = unlimited].
   -u, --ncbi_nlm_url    Try using the NCBI ftp address with '.nlm' for
                         ncbi-genome-download if there are issues.
 ```
