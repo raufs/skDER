@@ -95,7 +95,7 @@ def create_parser():
 	parser.add_argument('-s', '--sanity_check', action='store_true', help="Confirm each FASTA file provided or downloaded is actually\na FASTA file. Makes it slower, but generally\ngood practice.", required=False, default=False)
 	parser.add_argument('-l', '--symlink', action='store_true', help="Symlink representative genomes in results subdirectory\ninstead of performing a copy of the files.", required=False, default=False)
 	parser.add_argument('-c', '--cpus', type=int, help="Number of CPUs to use [Default is 1].", required=False, default=1)
-	parser.add_argument('-m', '--memory', type=float, help="The memory limit for CD-HIT in Gigabytes [Default is 4].", required=False, default=4)
+	parser.add_argument('-m', '--memory', type=float, help="The memory limit for CD-HIT in Gigabytes [Default is 0 = unlimited].", required=False, default=0)
 	parser.add_argument('-u', '--ncbi_nlm_url', action='store_true', help="Try using the NCBI ftp address with '.nlm' for\nncbi-genome-download if there are issues.", required=False, default=False)
 	parser.add_argument('-v', '--version', action='store_true', help="Report version of CiDDER.", required=False, default=False)
 	args = parser.parse_args()
@@ -321,7 +321,10 @@ def cidder_main():
 	# run CD-HIT on combined proteomes file
 	cdhit_result_prefix = outdir + 'CD-HIT_clustering.faa'
 	cdhit_cluster_file = cdhit_result_prefix + '.clstr'
-	cdhit_cmd = ['cd-hit', '-d', '0', '-T', str(cpus), '-M', str(memory*1000.0), cd_hit_params, '-i', combined_proteome_faa, '-o', cdhit_result_prefix]
+	cdhit_mem = 1000.0*memory
+	if cdhit_mem < 1:
+		cdhit_mem = 1
+	cdhit_cmd = ['cd-hit', '-d', '0', '-T', str(cpus), '-M', str(cdhit_mem), cd_hit_params, '-i', combined_proteome_faa, '-o', cdhit_result_prefix]
 	try:
 		util.runCmd(cdhit_cmd, logObject, check_files=[cdhit_cluster_file])
 	except:
