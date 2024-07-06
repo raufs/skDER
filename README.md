@@ -220,10 +220,13 @@ cidder -h
 The help function should return the following:
 
 ```
-usage: cidder [-h] [-g GENOMES [GENOMES ...]] [-t TAXA_NAME] [-r GTDB_RELEASE] -o OUTPUT_DIRECTORY [-p CD_HIT_PARAMS] [-m] [-e] [-n NEW_PROTEINS_NEEDED] [-ts TOTAL_SATURATION]
-              [-mgs MULTI_GENOME_SATURATION] [-s] [-l] [-c CPUS] [-u] [-v]
+usage: cidder [-h] [-g GENOMES [GENOMES ...]] [-t TAXA_NAME] [-r GTDB_RELEASE]
+              -o OUTPUT_DIRECTORY [-p CD_HIT_PARAMS] [-mg] [-e]
+              [-n NEW_PROTEINS_NEEDED] [-ts TOTAL_SATURATION]
+              [-mgs MULTI_GENOME_SATURATION] [-s] [-l] [-c CPUS] [-m MEMORY]
+              [-u] [-v]
 
-	Program: geneder
+	Program: cidder
 	Author: Rauf Salamzade
 	Affiliation: Kalan Lab, UW Madison, Department of Medical Microbiology and Immunology
 
@@ -261,10 +264,9 @@ options:
                         Output directory.
   -p CD_HIT_PARAMS, --cd-hit-params CD_HIT_PARAMS
                         CD-HIT parameters to use for clustering proteins - select carefully
-                        (also controls memory via the -M argument, but don't set threads - that
-                        is done by default in cidder) and surround by quotes
-                        [Default is: "-n 5 -c 95.0 -aL 0.75 -aS 0.90 -M 4000"]
-  -m, --metagenome-mode
+                        (don't set threads or memory - those are done by default in cidder) and surround by quotes
+                        [Default is: "-n 5 -c 0.95 -aL 0.75 -aS 0.90"]
+  -mg, --metagenome-mode
                         Run pyrodigal using metagenome mode [Default is False].
   -e, --include-edge-orfs
                         Include proteins from ORFs that hang off the edge of a contig/scaffold
@@ -282,10 +284,11 @@ options:
                         good practice.
   -l, --symlink         Symlink representative genomes in results subdirectory
                         instead of performing a copy of the files.
-  -c CPUS, --cpus CPUS  Number of CPUs to use.
+  -c CPUS, --cpus CPUS  Number of CPUs to use [Default is 1].
+  -m MEMORY, --memory MEMORY
+                        The memory limit for CD-HIT in Gigabytes [Default is 4].
   -u, --ncbi_nlm_url    Try using the NCBI ftp address with '.nlm' for
                         ncbi-genome-download if there are issues.
-  -v, --version         Report version of CiDDER.
 ```
 
 ## Citation notice
