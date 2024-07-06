@@ -322,7 +322,7 @@ def cidder_main():
 	cdhit_result_prefix = outdir + 'CD-HIT_clustering.faa'
 	cdhit_cluster_file = cdhit_result_prefix + '.clstr'
 	cdhit_mem = 1000.0*memory
-	if cdhit_mem < 1:
+	if cdhit_mem > 0 and cdhit_mem < 1:
 		cdhit_mem = 1
 	cdhit_cmd = ['cd-hit', '-d', '0', '-T', str(cpus), '-M', str(cdhit_mem), cd_hit_params, '-i', combined_proteome_faa, '-o', cdhit_result_prefix]
 	try:
