@@ -143,7 +143,7 @@ def skder_main():
 		sys.exit(1)
 
 	if os.path.isdir(outdir):
-		sys.stderr.write("Output directory already exists! Overwriting in 5 seconds, but only where needed will use checkpoint files to skip certain steps...\n")
+		sys.stderr.write("Output directory already exists! Overwriting in 5 seconds...\n")
 		sleep(5)
 
 	util.setupDirectories([outdir])
