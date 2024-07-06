@@ -60,7 +60,7 @@ VALID_GTDB_RELEASES = set(['R214', 'R220'])
 def create_parser():
 	""" Parse arguments """
 	parser = argparse.ArgumentParser(description="""
-	Program: geneder
+	Program: cidder
 	Author: Rauf Salamzade
 	Affiliation: Kalan Lab, UW Madison, Department of Medical Microbiology and Immunology
 
@@ -86,21 +86,22 @@ def create_parser():
 	parser.add_argument('-t', '--taxa-name', help='Genus or species identifier from GTDB for which to\ndownload genomes for and include in\ndereplication analysis [Optional].', required=False, default=None)
 	parser.add_argument('-r', '--gtdb-release', help='Which GTDB release to use if -t argument issued [Default is R220].', default="R220")
 	parser.add_argument('-o', '--output-directory', help='Output directory.', required=True)
-	parser.add_argument('-p', '--cd-hit-params', help="CD-HIT parameters to use for clustering proteins - select carefully\n(also controls memory via the -M argument, but don't set threads - that\nis done by default in cidder) and surround by quotes\n[Default is: \"-n 5 -c 0.95 -aL 0.75 -aS 0.90 -M 4000\"]", required=False, default="-n 5 -c 0.95 -aL 0.75 -aS 0.90 -M 4000")
-	parser.add_argument('-m', '--metagenome-mode', action='store_true', help="Run pyrodigal using metagenome mode [Default is False].",  required=False, default=False)
+	parser.add_argument('-p', '--cd-hit-params', help="CD-HIT parameters to use for clustering proteins - select carefully\n(don't set threads or memory - those are done by default in cidder) and surround by quotes\n[Default is: \"-n 5 -c 0.95 -aL 0.75 -aS 0.90\"]", required=False, default="-n 5 -c 0.95 -aL 0.75 -aS 0.90")
+	parser.add_argument('-mg', '--metagenome-mode', action='store_true', help="Run pyrodigal using metagenome mode [Default is False].",  required=False, default=False)
 	parser.add_argument('-e', '--include-edge-orfs', action='store_true', help="Include proteins from ORFs that hang off the edge of a contig/scaffold\n[Default is False].", required=False, default=False)
 	parser.add_argument('-n', '--new-proteins-needed', type=int, help="The number of new protein clusters needed to add [Default is 0].", required=False, default=0)
 	parser.add_argument('-ts', '--total-saturation', type=float, help="The percentage of total proteins clusters needed to stop representative\ngenome selection [Default is 90.0].", required=False, default=90.0)
 	parser.add_argument('-mgs', '--multi-genome-saturation', type=float, help="The percentage of total multi-genome protein clusters needed to stop\nrepresentative genome selection [Default is 100.0].", required=False, default=100.0)
 	parser.add_argument('-s', '--sanity_check', action='store_true', help="Confirm each FASTA file provided or downloaded is actually\na FASTA file. Makes it slower, but generally\ngood practice.", required=False, default=False)
 	parser.add_argument('-l', '--symlink', action='store_true', help="Symlink representative genomes in results subdirectory\ninstead of performing a copy of the files.", required=False, default=False)
-	parser.add_argument('-c', '--cpus', type=int, help="Number of CPUs to use.", required=False, default=1)
+	parser.add_argument('-c', '--cpus', type=int, help="Number of CPUs to use [Default is 1].", required=False, default=1)
+	parser.add_argument('-m', '--memory', type=float, help="The memory limit for CD-HIT in Gigabytes [Default is 4].", required=False, default=4)
 	parser.add_argument('-u', '--ncbi_nlm_url', action='store_true', help="Try using the NCBI ftp address with '.nlm' for\nncbi-genome-download if there are issues.", required=False, default=False)
 	parser.add_argument('-v', '--version', action='store_true', help="Report version of CiDDER.", required=False, default=False)
 	args = parser.parse_args()
 	return args
 
-def skder_main():
+def cidder_main():
 	if len(sys.argv)>1 and ('-v' in set(sys.argv) or '--version' in set(sys.argv)):
 		sys.stderr.write('Version of CiDDER (skDER pacakge) being used is: ' + str(version) + '\n')
 		sys.exit(0)
@@ -123,6 +124,7 @@ def skder_main():
 	sanity_check = myargs.sanity_check
 	symlink = myargs.symlink
 	cpus = myargs.cpus
+	memory = myargs.memory
 	ncbi_nlm_url_flag = myargs.ncbi_nlm_url
 
 	ngd_url = "https://ftp.ncbi.nih.gov/genomes"
@@ -319,8 +321,14 @@ def skder_main():
 	# run CD-HIT on combined proteomes file
 	cdhit_result_prefix = outdir + 'CD-HIT_clustering.faa'
 	cdhit_cluster_file = cdhit_result_prefix + '.clstr'
-	cdhit_cmd = ['cd-hit', '-d', '0', '-T', str(cpus), cd_hit_params, '-i', combined_proteome_faa, '-o', cdhit_result_prefix]
-	util.runCmd(cdhit_cmd, logObject, check_files=[cdhit_cluster_file])
+	cdhit_cmd = ['cd-hit', '-d', '0', '-T', str(cpus), '-M', str(memory*1000.0), cd_hit_params, '-i', combined_proteome_faa, '-o', cdhit_result_prefix]
+	try:
+		util.runCmd(cdhit_cmd, logObject, check_files=[cdhit_cluster_file])
+	except:
+		msg = 'Issue with running CD-HIT. This is likely because the memory requested was not sufficient, try increaseing memory using the `-m` argument in cidder.'
+		sys.stderr.write(msg + '\n') 
+		logObject.error(msg)
+		sys.exit(1)
 
 	# process CD-HIT clustering resulting results
 	genome_protein_clusters = defaultdict(set)
@@ -436,5 +444,4 @@ def skder_main():
 	sys.exit(0)
 
 if __name__ == '__main__':
-	multiprocessing.set_start_method('fork')
-	skder_main()
+	cidder_main()
