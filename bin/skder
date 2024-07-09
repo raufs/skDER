@@ -80,21 +80,21 @@ def create_parser():
 	""", formatter_class=argparse.RawTextHelpFormatter)
 
 	parser.add_argument('-g', '--genomes', nargs='+', help='Genome assembly files in (gzipped) FASTA format\n(accepted suffices are: *.fasta,\n*.fa, *.fas, or *.fna) [Optional].', required=False, default=[])
-	parser.add_argument('-t', '--taxa_name', help='Genus or species identifier from GTDB for which to\ndownload genomes for and include in\ndereplication analysis [Optional].', required=False, default=None)
-	parser.add_argument('-r', '--gtdb_release', help='Which GTDB release to use if -t argument issued [Default is R220].', default="R220")
-	parser.add_argument('-o', '--output_directory', help='Output directory.', required=True)
-	parser.add_argument('-d', '--dereplication_mode', help='Whether to use a "dynamic" (more concise) or "greedy" (more\ncomprehensive) approach to selecting representative genomes.\n[Default is "dynamic"]', required=False, default="dynamic")
-	parser.add_argument('-i', '--percent_identity_cutoff', type=float, help="ANI cutoff for dereplication [Default is 99.0].", required=False, default=99.0)
-	parser.add_argument('-tc', '--test_cutoffs', action='store_true', help="Assess clustering using various pre-selected cutoffs.", required=False, default=False)
-	parser.add_argument('-f', '--aligned_fraction_cutoff', type=float, help="Aligned cutoff threshold for dereplication - only needed by\none genome [Default is 90.0].", required=False, default=90.0)
-	parser.add_argument('-a', '--max_af_distance_cutoff', type=float, help="Maximum difference for aligned fraction between a pair to\nautomatically disqualify the genome with a higher\nAF from being a representative.", required=False, default=10.0)
-	parser.add_argument('-p', '--skani_triangle_parameters', help="Options for skani triangle. Note ANI and AF cutoffs\nare specified separately and the -E parameter is always\nrequested. [Default is \"\"].", default="", required=False)
+	parser.add_argument('-t', '--taxa-name', help='Genus or species identifier from GTDB for which to\ndownload genomes for and include in\ndereplication analysis [Optional].', required=False, default=None)
+	parser.add_argument('-r', '--gtdb-release', help='Which GTDB release to use if -t argument issued [Default is R220].', default="R220")
+	parser.add_argument('-o', '--output-directory', help='Output directory.', required=True)
+	parser.add_argument('-d', '--dereplication-mode', help='Whether to use a "dynamic" (more concise) or "greedy" (more\ncomprehensive) approach to selecting representative genomes.\n[Default is "dynamic"]', required=False, default="dynamic")
+	parser.add_argument('-i', '--percent-identity-cutoff', type=float, help="ANI cutoff for dereplication [Default is 99.0].", required=False, default=99.0)
+	parser.add_argument('-tc', '--test-cutoffs', action='store_true', help="Assess clustering using various pre-selected cutoffs.", required=False, default=False)
+	parser.add_argument('-f', '--aligned-fraction-cutoff', type=float, help="Aligned cutoff threshold for dereplication - only needed by\none genome [Default is 90.0].", required=False, default=90.0)
+	parser.add_argument('-a', '--max-af-distance-cutoff', type=float, help="Maximum difference for aligned fraction between a pair to\nautomatically disqualify the genome with a higher\nAF from being a representative.", required=False, default=10.0)
+	parser.add_argument('-p', '--skani-triangle-parameters', help="Options for skani triangle. Note ANI and AF cutoffs\nare specified separately and the -E parameter is always\nrequested. [Default is \"\"].", default="", required=False)
 	parser.add_argument('-c', '--cpus', type=int, help="Number of CPUs to use.", required=False, default=1)
-	parser.add_argument('-s', '--sanity_check', action='store_true', help="Confirm each FASTA file provided or downloaded is actually\na FASTA file. Makes it slower, but generally\ngood practice.", required=False, default=False)
-	parser.add_argument('-n', '--determine_clusters', action='store_true', help="Perform secondary clustering to assign non-representative\ngenomes to their closest representative genomes.", required=False, default=False)
+	parser.add_argument('-s', '--sanity-check', action='store_true', help="Confirm each FASTA file provided or downloaded is actually\na FASTA file. Makes it slower, but generally\ngood practice.", required=False, default=False)
+	parser.add_argument('-n', '--determine-clusters', action='store_true', help="Perform secondary clustering to assign non-representative\ngenomes to their closest representative genomes.", required=False, default=False)
 	parser.add_argument('-l', '--symlink', action='store_true', help="Symlink representative genomes in results subdirectory\ninstead of performing a copy of the files.", required=False, default=False)
-	parser.add_argument('-b', '--index_locally', action='store_true', help="Build indices locally instead of in the directory of input genomes.", required=False, default=False)
-	parser.add_argument('-u', '--ncbi_nlm_url', action='store_true', help="Try using the NCBI ftp address with '.nlm' for\nncbi-genome-download if there are issues.", required=False, default=False)
+	parser.add_argument('-b', '--index-locally', action='store_true', help="Build indices locally instead of in the directory of input genomes.", required=False, default=False)
+	parser.add_argument('-u', '--ncbi-nlm-url', action='store_true', help="Try using the NCBI ftp address with '.nlm' for\nncbi-genome-download if there are issues.", required=False, default=False)
 	parser.add_argument('-v', '--version', action='store_true', help="Report version of skDER.", required=False, default=False)
 	args = parser.parse_args()
 	return args
@@ -167,7 +167,7 @@ def skder_main():
 
 	specified_af_cutoff = aligned_fraction_cutoff
 	if determine_clusters_flag and selection_mode == 'dynamic':
-		aligned_fraction_cutoff = aligned_fraction_cutoff - 20.0
+		aligned_fraction_cutoff = max([aligned_fraction_cutoff - 20.0, 0.0])
 
 	all_genomes_listing_file = outdir + 'All_Genomes_Listing.txt'
 
@@ -317,6 +317,8 @@ def skder_main():
 			      '--min-af', str(aligned_fraction_cutoff), '-E', skani_triangle_parameters, '-t', str(cpus), '-o', skani_result_file]
 	if test_cutoffs_flag:
 		min_af_cutoff = min(PRESELECTED_AF_CUTOFFS)
+		if selection_mode == 'dynamic':
+			min_af_cutoff = max([min_af_cutoff - 20.0, 0.0])
 		skani_triangle_cmd = ['skani', 'triangle', '-l', all_genomes_listing_file,
 			      '--min-af', str(min_af_cutoff), '-E', skani_triangle_parameters, '-t', str(cpus), '-o', skani_result_file]
 	util.runCmd(skani_triangle_cmd, logObject, check_files=[skani_result_file])

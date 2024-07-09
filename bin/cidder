@@ -87,16 +87,18 @@ def create_parser():
 	parser.add_argument('-r', '--gtdb-release', help='Which GTDB release to use if -t argument issued [Default is R220].', default="R220")
 	parser.add_argument('-o', '--output-directory', help='Output directory.', required=True)
 	parser.add_argument('-p', '--cd-hit-params', help="CD-HIT parameters to use for clustering proteins - select carefully\n(don't set threads or memory - those are done by default in cidder) and surround by quotes\n[Default is: \"-n 5 -c 0.95 -aL 0.75 -aS 0.90\"]", required=False, default="-n 5 -c 0.95 -aL 0.75 -aS 0.90")
-	parser.add_argument('-mg', '--metagenome-mode', action='store_true', help="Run pyrodigal using metagenome mode [Default is False].",  required=False, default=False)
-	parser.add_argument('-e', '--include-edge-orfs', action='store_true', help="Include proteins from ORFs that hang off the edge of a contig/scaffold\n[Default is False].", required=False, default=False)
-	parser.add_argument('-n', '--new-proteins-needed', type=int, help="The number of new protein clusters needed to add [Default is 0].", required=False, default=0)
+	parser.add_argument('-mg', '--metagenome-mode', action='store_true', help="Run pyrodigal using metagenome mode.",  required=False, default=False)
+	parser.add_argument('-e', '--include-edge-orfs', action='store_true', help="Include proteins from ORFs that hang off the edge of a contig/scaffold.", required=False, default=False)
+	parser.add_argument('-a', '--new-proteins-needed', type=int, help="The number of new protein clusters needed to add [Default is 0].", required=False, default=0)
 	parser.add_argument('-ts', '--total-saturation', type=float, help="The percentage of total proteins clusters needed to stop representative\ngenome selection [Default is 90.0].", required=False, default=90.0)
 	parser.add_argument('-mgs', '--multi-genome-saturation', type=float, help="The percentage of total multi-genome protein clusters needed to stop\nrepresentative genome selection [Default is 100.0].", required=False, default=100.0)
-	parser.add_argument('-s', '--sanity_check', action='store_true', help="Confirm each FASTA file provided or downloaded is actually\na FASTA file. Makes it slower, but generally\ngood practice.", required=False, default=False)
+	parser.add_argument('-s', '--sanity-check', action='store_true', help="Confirm each FASTA file provided or downloaded is actually\na FASTA file. Makes it slower, but generally\ngood practice.", required=False, default=False)
+	parser.add_argument('-n', '--determine-clusters', action='store_true', help="Perform secondary clustering to assign non-representative\ngenomes to their closest representative genomes based on shared protein clusters.", required=False, default=False)
+	parser.add_argument('-ns', '--determine-clusters-skani', action='store_true', help="Perform secondary clustering to assign non-representative\ngenomes to their closest representative genomes based on skani-computed ANI.", required=False, default=False)
 	parser.add_argument('-l', '--symlink', action='store_true', help="Symlink representative genomes in results subdirectory\ninstead of performing a copy of the files.", required=False, default=False)
 	parser.add_argument('-c', '--cpus', type=int, help="Number of CPUs to use [Default is 1].", required=False, default=1)
 	parser.add_argument('-m', '--memory', type=float, help="The memory limit for CD-HIT in Gigabytes [Default is 0 = unlimited].", required=False, default=0)
-	parser.add_argument('-u', '--ncbi_nlm_url', action='store_true', help="Try using the NCBI ftp address with '.nlm' for\nncbi-genome-download if there are issues.", required=False, default=False)
+	parser.add_argument('-u', '--ncbi-nlm-url', action='store_true', help="Try using the NCBI ftp address with '.nlm' for\nncbi-genome-download if there are issues.", required=False, default=False)
 	parser.add_argument('-v', '--version', action='store_true', help="Report version of CiDDER.", required=False, default=False)
 	args = parser.parse_args()
 	return args
@@ -126,6 +128,8 @@ def cidder_main():
 	cpus = myargs.cpus
 	memory = myargs.memory
 	ncbi_nlm_url_flag = myargs.ncbi_nlm_url
+	determine_clusters_flag = myargs.determine_clusters
+	determine_clusters_ani_flag = myargs.determine_clusters_skani
 
 	ngd_url = "https://ftp.ncbi.nih.gov/genomes"
 	if ncbi_nlm_url_flag:
@@ -434,6 +438,101 @@ def cidder_main():
 	msg = 'There were %d representative genomes selected from %d considered!' % (len(rep_genomes), number_of_genomes)
 	sys.stdout.write(msg + '\n')
 	logObject.info(msg)	
+
+	# perform secondary clustering
+	if determine_clusters_flag:
+		msg = 'Performing assignment of genomes to their nearest representative genomes based on protein cluster containment.'
+		sys.stdout.write(msg + '\n')
+
+		cidder_cluster_result_file = outdir + 'CiDDER_Clustering.txt'
+
+		scrf_handle = open(cidder_cluster_result_file, 'w')
+		scrf_handle.write('genome\tnearest_representative_genome(s)\tmax_containment_of_genome_protein_clusters\tgenome_protein_cluster_count\trepresentative_genome_protein_cluster_count\n')
+
+		for rg in rep_genomes:
+			printlist = [rg, rg, 100.0, len(genome_protein_clusters[rg]), len(genome_protein_clusters[rg])]
+			scrf_handle.write('\t'.join([str(x) for x in printlist]) + '\n')
+
+		for genome in genome_protein_clusters:
+			if genome in rep_genomes: continue
+			fpcs = genome_protein_clusters[genome]
+			max_containment = 0.0
+			rep_genome_distances = []
+			for rep_genome in rep_genomes:
+				rpcs = genome_protein_clusters[rep_genome]
+				containment = len(fpcs.intersection(rpcs))/float(len(fpcs))
+				rep_genome_distances.append([rep_genome, containment])
+				if max_containment < containment:
+					max_containment = containment
+
+			superset_refs = set([])
+			for rgr in sorted(rep_genome_distances, key=itemgetter(1), reverse=True):
+				if rgr[1] == max_containment:
+					superset_refs.add(rgr[0])
+				else:
+					break
+
+			printlist = [genome, ', '.join(sorted(superset_refs)), str(max_containment*100.0), str(len(fpcs)), str(len(rpcs))]
+			scrf_handle.write('\t'.join(printlist) + '\n')
+
+		scrf_handle.close()
+
+	if determine_clusters_ani_flag:
+		msg = 'Performing assignment of genomes to their nearest representative genomes based on skani ANI estimates.'
+		sys.stdout.write(msg + '\n')
+		
+		# run skani triangle
+		skani_result_file = outdir + 'Skani_Triangle_Edge_Output.txt'
+		
+		skani_triangle_cmd = ['skani', 'triangle', '-l', all_genomes_listing_file, '--min-af', '80.0', '-E', '-t', str(cpus), '-o', skani_result_file]
+		util.runCmd(skani_triangle_cmd, logObject, check_files=[skani_result_file])
+
+		cidder_cluster_result_file = outdir + 'CiDDER_skani_Clustering.txt'
+
+		scrf_handle = open(cidder_cluster_result_file, 'w')
+		scrf_handle.write('genome\tnearest_representative_genome\taverage_nucleotide_identity\talignment_fraction\n')
+
+		for rg in rep_genomes:
+			scrf_handle.write(rg + '\t' + rg + '\t100.0\t100.0\n')
+
+		best_rep_match_at_default_af = defaultdict(lambda: [set(["NA"]), 0.0, 0.0])
+		with open(skani_result_file) as osrf:
+			for i, line in enumerate(osrf):
+				if i == 0: continue
+				line = line.strip()
+				ref, que, ani, raf, qaf, _, _ = line.split('\t')
+
+				ref = '.'.join(ref.split('/')[-1].split('.')[:-1])
+				que = '.'.join(que.split('/')[-1].split('.')[:-1])
+
+				ani = float(ani)
+				raf = float(raf)
+				qaf = float(qaf)
+				if que in rep_genomes and not ref in rep_genomes:
+					if ani > best_rep_match_at_default_af[ref][1]:
+						best_rep_match_at_default_af[ref] = [set([que]), ani, raf]
+					elif ani == best_rep_match_at_default_af[ref][1]:
+						if raf > best_rep_match_at_default_af[ref][2]:
+							best_rep_match_at_default_af[ref] = [set([que]), ani, raf]
+						elif raf == best_rep_match_at_default_af[ref][2]:
+							best_rep_match_at_default_af[ref][0].add(que)
+
+				if ref in rep_genomes and not que in rep_genomes:
+					if ani > best_rep_match_at_default_af[que][1]:
+						best_rep_match_at_default_af[que] = [set([ref]), ani, qaf]
+					elif ani == best_rep_match_at_default_af[que][1]:
+						if qaf > best_rep_match_at_default_af[que][2]:
+							best_rep_match_at_default_af[que] = [set([ref]), ani, qaf]
+						elif qaf == best_rep_match_at_default_af[que][2]:
+							best_rep_match_at_default_af[que][0].add(ref)
+											
+		for gen in genome_protein_clusters:
+			if gen in rep_genomes: continue
+			scrf_handle.write('\t'.join([gen, ', '.join(best_rep_match_at_default_af[gen][0]), 
+								str(best_rep_match_at_default_af[gen][1]), 
+								str(best_rep_match_at_default_af[gen][2])]) + '\n')
+				
+		scrf_handle.close()
 
 	# close logging object and exit
 	logObject.info('******************\nCiDDER finished!\n******************\nDirectory with representative genomes can be found at: %s' % cidder_drep_dir)
