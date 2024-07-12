@@ -96,9 +96,9 @@ def create_parser():
 	parser.add_argument('-n', '--determine-clusters', action='store_true', help="Perform secondary clustering to assign non-representative\ngenomes to their closest representative genomes based on shared protein clusters.", required=False, default=False)
 	parser.add_argument('-ns', '--determine-clusters-skani', action='store_true', help="Perform secondary clustering to assign non-representative\ngenomes to their closest representative genomes based on skani-computed ANI.", required=False, default=False)
 	parser.add_argument('-l', '--symlink', action='store_true', help="Symlink representative genomes in results subdirectory\ninstead of performing a copy of the files.", required=False, default=False)
-	parser.add_argument('-c', '--cpus', type=int, help="Number of CPUs to use [Default is 1].", required=False, default=1)
-	parser.add_argument('-m', '--memory', type=float, help="The memory limit for CD-HIT in Gigabytes [Default is 0 = unlimited].", required=False, default=0)
 	parser.add_argument('-u', '--ncbi-nlm-url', action='store_true', help="Try using the NCBI ftp address with '.nlm' for\nncbi-genome-download if there are issues.", required=False, default=False)
+	parser.add_argument('-c', '--threads', type=int, help="Number of threads/processes to use [Default is 1].", required=False, default=1)
+	parser.add_argument('-m', '--memory', type=float, help="The memory limit for CD-HIT in Gigabytes [Default is 0 = unlimited].", required=False, default=0)
 	parser.add_argument('-v', '--version', action='store_true', help="Report version of CiDDER.", required=False, default=False)
 	args = parser.parse_args()
 	return args
@@ -125,7 +125,7 @@ def cidder_main():
 	multigenome_saturation_cutoff = myargs.multi_genome_saturation
 	sanity_check = myargs.sanity_check
 	symlink = myargs.symlink
-	cpus = myargs.cpus
+	threads = myargs.threads
 	memory = myargs.memory
 	ncbi_nlm_url_flag = myargs.ncbi_nlm_url
 	determine_clusters_flag = myargs.determine_clusters
@@ -297,7 +297,7 @@ def cidder_main():
 		sys.exit(1)
 
 	try:
-		p = multiprocessing.Pool(cpus)
+		p = multiprocessing.Pool(threads)
 		p.map(util.multiProcess, pyrodigal_cmds)
 		p.close()
 	except Exception as e:
@@ -328,7 +328,7 @@ def cidder_main():
 	cdhit_mem = 1000.0*memory
 	if cdhit_mem > 0 and cdhit_mem < 1:
 		cdhit_mem = 1
-	cdhit_cmd = ['cd-hit', '-d', '0', '-T', str(cpus), '-M', str(cdhit_mem), cd_hit_params, '-i', combined_proteome_faa, '-o', cdhit_result_prefix]
+	cdhit_cmd = ['cd-hit', '-d', '0', '-T', str(threads), '-M', str(cdhit_mem), cd_hit_params, '-i', combined_proteome_faa, '-o', cdhit_result_prefix]
 	try:
 		util.runCmd(cdhit_cmd, logObject, check_files=[cdhit_cluster_file])
 	except:
@@ -484,7 +484,7 @@ def cidder_main():
 		# run skani triangle
 		skani_result_file = outdir + 'Skani_Triangle_Edge_Output.txt'
 		
-		skani_triangle_cmd = ['skani', 'triangle', '-l', all_genomes_listing_file, '--min-af', '80.0', '-E', '-t', str(cpus), '-o', skani_result_file]
+		skani_triangle_cmd = ['skani', 'triangle', '-l', all_genomes_listing_file, '--min-af', '80.0', '-E', '-t', str(threads), '-o', skani_result_file]
 		util.runCmd(skani_triangle_cmd, logObject, check_files=[skani_result_file])
 
 		cidder_cluster_result_file = outdir + 'CiDDER_skani_Clustering.txt'

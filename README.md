@@ -68,6 +68,8 @@ skDER features two distinct algorithms for dereplication (details can be found b
 
 #### CiDDER
 
+***Currently only for bacteria - because it uses pyrodigal for gene calling!***
+
 In v1.2.0, we also introduced a second program called CiDDER (CD-hit based DEReplication) - which allows for optimizing selection of a minimal number of genomes that achieve some level of saturation of the pan-genome of the full set of genomes (see below for details). Note, CD-HIT determines protein clusters, not proper ortholog groups, and as such an approximation is made of the pan-genome space being sampled by representative genomes.
 
 ## Details on Dereplication Algorithms
@@ -145,7 +147,7 @@ The help function should return the following:
 
 ```
 usage: skder [-h] [-g GENOMES [GENOMES ...]] [-t TAXA_NAME] [-r GTDB_RELEASE] -o OUTPUT_DIRECTORY [-d DEREPLICATION_MODE] [-i PERCENT_IDENTITY_CUTOFF] [-tc] [-f ALIGNED_FRACTION_CUTOFF]
-             [-a MAX_AF_DISTANCE_CUTOFF] [-p SKANI_TRIANGLE_PARAMETERS] [-c CPUS] [-s] [-n] [-l] [-b] [-u] [-v]
+             [-a MAX_AF_DISTANCE_CUTOFF] [-p SKANI_TRIANGLE_PARAMETERS] [-s] [-n] [-l] [-b] [-u] [-c THREADS] [-v]
 
 	Program: skder
 	Author: Rauf Salamzade
@@ -169,46 +171,47 @@ options:
                         Genome assembly files in (gzipped) FASTA format
                         (accepted suffices are: *.fasta,
                         *.fa, *.fas, or *.fna) [Optional].
-  -t TAXA_NAME, --taxa_name TAXA_NAME
+  -t TAXA_NAME, --taxa-name TAXA_NAME
                         Genus or species identifier from GTDB for which to
                         download genomes for and include in
                         dereplication analysis [Optional].
-  -r GTDB_RELEASE, --gtdb_release GTDB_RELEASE
+  -r GTDB_RELEASE, --gtdb-release GTDB_RELEASE
                         Which GTDB release to use if -t argument issued [Default is R220].
-  -o OUTPUT_DIRECTORY, --output_directory OUTPUT_DIRECTORY
+  -o OUTPUT_DIRECTORY, --output-directory OUTPUT_DIRECTORY
                         Output directory.
-  -d DEREPLICATION_MODE, --dereplication_mode DEREPLICATION_MODE
+  -d DEREPLICATION_MODE, --dereplication-mode DEREPLICATION_MODE
                         Whether to use a "dynamic" (more concise) or "greedy" (more
                         comprehensive) approach to selecting representative genomes.
                         [Default is "dynamic"]
-  -i PERCENT_IDENTITY_CUTOFF, --percent_identity_cutoff PERCENT_IDENTITY_CUTOFF
+  -i PERCENT_IDENTITY_CUTOFF, --percent-identity-cutoff PERCENT_IDENTITY_CUTOFF
                         ANI cutoff for dereplication [Default is 99.0].
-  -tc, --test_cutoffs   Assess clustering using various pre-selected cutoffs.
-  -f ALIGNED_FRACTION_CUTOFF, --aligned_fraction_cutoff ALIGNED_FRACTION_CUTOFF
+  -tc, --test-cutoffs   Assess clustering using various pre-selected cutoffs.
+  -f ALIGNED_FRACTION_CUTOFF, --aligned-fraction-cutoff ALIGNED_FRACTION_CUTOFF
                         Aligned cutoff threshold for dereplication - only needed by
                         one genome [Default is 90.0].
-  -a MAX_AF_DISTANCE_CUTOFF, --max_af_distance_cutoff MAX_AF_DISTANCE_CUTOFF
+  -a MAX_AF_DISTANCE_CUTOFF, --max-af-distance-cutoff MAX_AF_DISTANCE_CUTOFF
                         Maximum difference for aligned fraction between a pair to
                         automatically disqualify the genome with a higher
                         AF from being a representative.
-  -p SKANI_TRIANGLE_PARAMETERS, --skani_triangle_parameters SKANI_TRIANGLE_PARAMETERS
+  -p SKANI_TRIANGLE_PARAMETERS, --skani-triangle-parameters SKANI_TRIANGLE_PARAMETERS
                         Options for skani triangle. Note ANI and AF cutoffs
                         are specified separately and the -E parameter is always
                         requested. [Default is ""].
-  -c CPUS, --cpus CPUS  Number of CPUs to use.
-  -s, --sanity_check    Confirm each FASTA file provided or downloaded is actually
+  -s, --sanity-check    Confirm each FASTA file provided or downloaded is actually
                         a FASTA file. Makes it slower, but generally
                         good practice.
-  -n, --determine_clusters
+  -n, --determine-clusters
                         Perform secondary clustering to assign non-representative
                         genomes to their closest representative genomes.
   -l, --symlink         Symlink representative genomes in results subdirectory
                         instead of performing a copy of the files.
-  -b, --index_locally   Build indices locally instead of in the directory of input genomes.
-  -u, --ncbi_nlm_url    Try using the NCBI ftp address with '.nlm' for
+  -b, --index-locally   Build indices locally instead of in the directory of input genomes.
+  -u, --ncbi-nlm-url    Try using the NCBI ftp address with '.nlm' for
                         ncbi-genome-download if there are issues.
+  -c THREADS, --threads THREADS
+                        Number of threads/processes to use [Default is 1].
   -v, --version         Report version of skDER.
-  ```
+```
 
 ### Usage for CiDDER
 
@@ -220,11 +223,8 @@ cidder -h
 The help function should return the following:
 
 ```
-usage: cidder [-h] [-g GENOMES [GENOMES ...]] [-t TAXA_NAME] [-r GTDB_RELEASE]
-              -o OUTPUT_DIRECTORY [-p CD_HIT_PARAMS] [-mg] [-e]
-              [-n NEW_PROTEINS_NEEDED] [-ts TOTAL_SATURATION]
-              [-mgs MULTI_GENOME_SATURATION] [-s] [-l] [-c CPUS] [-m MEMORY]
-              [-u] [-v]
+usage: cidder [-h] [-g GENOMES [GENOMES ...]] [-t TAXA_NAME] [-r GTDB_RELEASE] -o OUTPUT_DIRECTORY [-p CD_HIT_PARAMS] [-mg] [-e] [-a NEW_PROTEINS_NEEDED] [-ts TOTAL_SATURATION]
+              [-mgs MULTI_GENOME_SATURATION] [-s] [-n] [-ns] [-l] [-u] [-c THREADS] [-m MEMORY] [-v]
 
 	Program: cidder
 	Author: Rauf Salamzade
@@ -267,11 +267,10 @@ options:
                         (don't set threads or memory - those are done by default in cidder) and surround by quotes
                         [Default is: "-n 5 -c 0.95 -aL 0.75 -aS 0.90"]
   -mg, --metagenome-mode
-                        Run pyrodigal using metagenome mode [Default is False].
+                        Run pyrodigal using metagenome mode.
   -e, --include-edge-orfs
-                        Include proteins from ORFs that hang off the edge of a contig/scaffold
-                        [Default is False].
-  -n NEW_PROTEINS_NEEDED, --new-proteins-needed NEW_PROTEINS_NEEDED
+                        Include proteins from ORFs that hang off the edge of a contig/scaffold.
+  -a NEW_PROTEINS_NEEDED, --new-proteins-needed NEW_PROTEINS_NEEDED
                         The number of new protein clusters needed to add [Default is 0].
   -ts TOTAL_SATURATION, --total-saturation TOTAL_SATURATION
                         The percentage of total proteins clusters needed to stop representative
@@ -279,16 +278,24 @@ options:
   -mgs MULTI_GENOME_SATURATION, --multi-genome-saturation MULTI_GENOME_SATURATION
                         The percentage of total multi-genome protein clusters needed to stop
                         representative genome selection [Default is 100.0].
-  -s, --sanity_check    Confirm each FASTA file provided or downloaded is actually
+  -s, --sanity-check    Confirm each FASTA file provided or downloaded is actually
                         a FASTA file. Makes it slower, but generally
                         good practice.
+  -n, --determine-clusters
+                        Perform secondary clustering to assign non-representative
+                        genomes to their closest representative genomes based on shared protein clusters.
+  -ns, --determine-clusters-skani
+                        Perform secondary clustering to assign non-representative
+                        genomes to their closest representative genomes based on skani-computed ANI.
   -l, --symlink         Symlink representative genomes in results subdirectory
                         instead of performing a copy of the files.
-  -c CPUS, --cpus CPUS  Number of CPUs to use [Default is 1].
+  -u, --ncbi-nlm-url    Try using the NCBI ftp address with '.nlm' for
+                        ncbi-genome-download if there are issues.
+  -c THREADS, --threads THREADS
+                        Number of threads/processes to use [Default is 1].
   -m MEMORY, --memory MEMORY
                         The memory limit for CD-HIT in Gigabytes [Default is 0 = unlimited].
-  -u, --ncbi_nlm_url    Try using the NCBI ftp address with '.nlm' for
-                        ncbi-genome-download if there are issues.
+  -v, --version         Report version of CiDDER.
 ```
 
 ## Citation notice
@@ -314,7 +321,7 @@ If you use CiDDER, please also consider citing pyrodigal (for gene-calling) and 
 
 ## Acknowledgments
 
-We thank Titus Brown, Tessa Pierce-Ward, and Karthik Anantharaman for helpful discussions on the development of skDER/CiDDER - in particular the idea to directly asses the pan-genome space sampled by representative genomes. 
+We thank Titus Brown, Tessa Pierce-Ward, and Karthik Anantharaman for helpful discussions on the development of skDER/CiDDER - in particular the idea to directly asses the pan-genome space sampled by representative genomes. We also thank users on GitHub issues for suggesting ideas for new features.
 
 ## LICENSE
 
