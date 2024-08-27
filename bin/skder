@@ -90,6 +90,8 @@ def create_parser():
 	parser.add_argument('-a', '--max-af-distance-cutoff', type=float, help="Maximum difference for aligned fraction between a pair to\nautomatically disqualify the genome with a higher\nAF from being a representative.", required=False, default=10.0)
 	parser.add_argument('-p', '--skani-triangle-parameters', help="Options for skani triangle. Note ANI and AF cutoffs\nare specified separately and the -E parameter is always\nrequested. [Default is \"\"].", default="", required=False)
 	parser.add_argument('-s', '--sanity-check', action='store_true', help="Confirm each FASTA file provided or downloaded is actually\na FASTA file. Makes it slower, but generally\ngood practice.", required=False, default=False)
+	parser.add_argument('-fm', '--filter-mge', action='store_true', help="Filter predicted MGE coordinates along genomes before dereplication assessment but after N50 computation.", required=False, default=False)
+	parser.add_argument('-gd', '--genomad-database', help="If filter-mge is specified, it will by default use PhiSpy; however, if a database directory for geNomad is provided - it will use that instead to predict MGEs.", default=None, required=False)
 	parser.add_argument('-n', '--determine-clusters', action='store_true', help="Perform secondary clustering to assign non-representative\ngenomes to their closest representative genomes.", required=False, default=False)
 	parser.add_argument('-l', '--symlink', action='store_true', help="Symlink representative genomes in results subdirectory\ninstead of performing a copy of the files.", required=False, default=False)
 	parser.add_argument('-b', '--index-locally', action='store_true', help="Build indices locally instead of in the directory of input genomes.", required=False, default=False)
@@ -125,6 +127,16 @@ def skder_main():
 	sanity_check = myargs.sanity_check
 	index_locally_flag = myargs.index_locally
 	ncbi_nlm_url_flag = myargs.ncbi_nlm_url
+	filter_mge_flag = myargs.filter_mge
+	genomad_database = myargs.genomad_database
+
+	if genomad_database != None:
+		sys.stdout.write('Attempting to use geNomad to predict and cut out MGEs from genome assembly!\n')
+		try:
+			assert(genomad_database != None and os.path.isdir(genomad_database))
+		except:
+			sys.stderr.write('geNomad requested as method but no or invalid path to the geNomad database provided via --genomad-db.\n')
+			sys.exit(1)
 
 	ngd_url = "https://ftp.ncbi.nih.gov/genomes"
 	if ncbi_nlm_url_flag:
@@ -304,9 +316,59 @@ def skder_main():
 	p.map(util.compute_n50, n50_inputs)
 	p.close()
 
+	# filter genomes for MGEs if requested
+	mge_proc_to_unproc_mapping = {}
+	mge_unproc_to_proc_mapping = {}
+	if filter_mge_flag:
+		mgecut_processed_dir = outdir + 'mgecut_processed_genomes/'
+		mgecut_tmp_dir = outdir + 'mgecut_tmp/'
+		util.setupDirectories([mgecut_processed_dir, mgecut_tmp_dir])
+
+		parallel_jobs_4thread = max(math.floor(threads / 4), 1)
+		multi_thread = 4
+		if threads < 4:
+			multi_thread = threads
+			parallel_jobs_4thread = 1
+
+		mgecut_cmds = []
+		with open(all_genomes_listing_file) as oaglf:
+			for line in oaglf:
+				genome = line.strip()
+				proc_genome = mgecut_processed_dir + genome.split('/')[-1]
+				mge_proc_to_unproc_mapping[proc_genome] = genome
+				mge_unproc_to_proc_mapping[genome] = proc_genome
+				tmp_dir = mgecut_tmp_dir + genome.split('/')[-1]
+				mgecut_cmd = ['mgecut', '-i', genome, '-o', proc_genome, '-d', tmp_dir, 
+				              '-c', str(multi_thread)]
+				if genomad_database != None:
+					mgecut_cmd += ['-m', 'genomad', '-gd', genomad_database]
+				mgecut_cmds.append(mgecut_cmd)
+		p = multiprocessing.Pool(parallel_jobs_4thread)
+		p.map(util.multiProcess, mgecut_cmds)
+		p.close()
+
+		genome_listing_mgecut_file = outdir + 'mgecut_Processed_Genomes_Listing.txt'
+		glmf_handle = open(genome_listing_mgecut_file, 'w')
+		for f in os.listdir(mgecut_processed_dir):
+			mgecut_genome_file = mgecut_processed_dir + f
+			glmf_handle.write(mgecut_genome_file + '\n')
+		glmf_handle.close()
+		all_genomes_listing_file = genome_listing_mgecut_file
+
 	# concatenate N50 results into a single file
-	concat_n50_result_file = outdir + 'Concatenated_N50.txt'
-	os.system('time find %s -maxdepth 1 -type f | xargs cat >> %s' % (n50_dir, concat_n50_result_file))
+	concat_n50_result_file = outdir + 'Concatenated_N50.txt'	
+	if filter_mge_flag:
+		cnf_handle = open(concat_n50_result_file, 'w')
+		for f in os.listdir(n50_dir):
+			with open(n50_dir + f) as on50f:
+				for line in on50f:
+					line = line.strip()
+					ls = line.split('\t')
+					proc_genome = mge_unproc_to_proc_mapping[ls[0]]
+					cnf_handle.write(proc_genome + '\t' + ls[1] + '\n')
+		cnf_handle.close()
+	else:
+		os.system('time find %s -maxdepth 1 -type f | xargs cat >> %s' % (n50_dir, concat_n50_result_file))
 
 	# remove the directory with N50 stats after concatenating info into a single file.
 	shutil.rmtree(n50_dir)
@@ -314,13 +376,15 @@ def skder_main():
 	# run skani triangle
 	skani_result_file = outdir + 'Skani_Triangle_Edge_Output.txt'
 	skani_triangle_cmd = ['skani', 'triangle', '-l', all_genomes_listing_file, 
-			      '--min-af', str(aligned_fraction_cutoff), '-E', skani_triangle_parameters, '-t', str(threads), '-o', skani_result_file]
+			              '--min-af', str(aligned_fraction_cutoff), '-E', skani_triangle_parameters, 
+						  '-t', str(threads), '-o', skani_result_file]
 	if test_cutoffs_flag:
 		min_af_cutoff = min(PRESELECTED_AF_CUTOFFS)
 		if selection_mode == 'dynamic':
 			min_af_cutoff = max([min_af_cutoff - 20.0, 0.0])
 		skani_triangle_cmd = ['skani', 'triangle', '-l', all_genomes_listing_file,
-			      '--min-af', str(min_af_cutoff), '-E', skani_triangle_parameters, '-t', str(threads), '-o', skani_result_file]
+	           		          '--min-af', str(min_af_cutoff), '-E', skani_triangle_parameters, 
+							  '-t', str(threads), '-o', skani_result_file]
 	util.runCmd(skani_triangle_cmd, logObject, check_files=[skani_result_file])
 
 	if test_cutoffs_flag:
@@ -335,10 +399,23 @@ def skder_main():
 				if selection_mode == 'dynamic':
 					# perform representative selection using dynamic method (default)
 					skder_core_prog = 'skDERcore'
-					skder_core_cmd = [skder_core_prog, skani_result_file, concat_n50_result_file, str(ani_cutoff), 
-									str(af_cutoff), str(max_af_distance_cutoff), '>', skder_result_file]
-					util.runCmd(skder_core_cmd, logObject, check_files=[skder_result_file])
-
+					if not filter_mge_flag:
+						skder_core_cmd = [skder_core_prog, skani_result_file, concat_n50_result_file, str(ani_cutoff), 
+			 							  str(af_cutoff), str(max_af_distance_cutoff), '>', skder_result_file]
+						util.runCmd(skder_core_cmd, logObject, check_files=[skder_result_file])
+					else:
+						skder_result_file_mge_paths = outdir + 'tmp_skDER_Results.txt'
+						skder_core_cmd = [skder_core_prog, skani_result_file, concat_n50_result_file, str(ani_cutoff), 
+			 							  str(af_cutoff), str(max_af_distance_cutoff), '>', skder_result_file_mge_paths]
+						util.runCmd(skder_core_cmd, logObject, check_files=[skder_result_file_mge_paths])
+						
+						srf_handle = open(skder_result_file, 'w')
+						with open(skder_result_file_mge_paths) as osrfmp:
+							for line in osrfmp:
+								line = line.strip()
+								unproc_genome = mge_proc_to_unproc_mapping[line]
+								srf_handle.write(unproc_genome + "\n")
+						srf_handle.close()
 				elif selection_mode == 'greedy':
 					# perform representative selection using greedy method
 					skder_sum_prog = 'skDERsum'
@@ -348,7 +425,7 @@ def skder_main():
 					util.runCmd(skder_sum_cmd, logObject, check_files=[genome_summary_file])
 
 					sorted_genome_summary_file = outdir + 'Genome_Information_for_Greedy_Clustering.sorted.txt'
-					sort_cmd = ['sort', '-k', '2', '-gr', genome_summary_file, '>', sorted_genome_summary_file]
+					sort_cmd = ['sort', '-k', '2', '--parallel=' + str(threads), '-gr', genome_summary_file, '>', sorted_genome_summary_file]
 					util.runCmd(sort_cmd, logObject, check_files=[sorted_genome_summary_file])
 
 					# greedy clustering
@@ -363,8 +440,12 @@ def skder_main():
 							ls = line.split('\t')
 							for g in ls[2].split('; '):
 								already_accounted.add(g)
-							skder_result_handle.write(curr_g + '\n')
+							if filter_mge_flag:
+								skder_result_handle.write(mge_proc_to_unproc_mapping[curr_g] + '\n')
+							else:
+								skder_result_handle.write(curr_g + '\n')
 					skder_result_handle.close()
+
 				rep_genome_count = 0 
 				with open(skder_result_file) as osrf:
 					for line in osrf:
@@ -397,9 +478,23 @@ def skder_main():
 		if selection_mode == 'dynamic':
 			# perform representative selection using dynamic method (default)
 			skder_core_prog = 'skDERcore'
-			skder_core_cmd = [skder_core_prog, skani_result_file, concat_n50_result_file, str(specified_ani_cutoff), 
-							str(specified_af_cutoff), str(max_af_distance_cutoff), '>', skder_result_file]
-			util.runCmd(skder_core_cmd, logObject, check_files=[skder_result_file])
+			if not filter_mge_flag:
+				skder_core_cmd = [skder_core_prog, skani_result_file, concat_n50_result_file, str(specified_ani_cutoff), 
+									str(specified_af_cutoff), str(max_af_distance_cutoff), '>', skder_result_file]
+				util.runCmd(skder_core_cmd, logObject, check_files=[skder_result_file])
+			else:
+				skder_result_file_mge_paths = outdir + 'tmp_skDER_Results.txt'
+				skder_core_cmd = [skder_core_prog, skani_result_file, concat_n50_result_file, str(specified_ani_cutoff), 
+									str(specified_af_cutoff), str(max_af_distance_cutoff), '>', skder_result_file_mge_paths]
+				util.runCmd(skder_core_cmd, logObject, check_files=[skder_result_file_mge_paths])
+				
+				srf_handle = open(skder_result_file, 'w')
+				with open(skder_result_file_mge_paths) as osrfmp:
+					for line in osrfmp:
+						line = line.strip()
+						unproc_genome = mge_proc_to_unproc_mapping[line]
+						srf_handle.write(unproc_genome + "\n")
+				srf_handle.close()
 
 		elif selection_mode == 'greedy':
 			# perform representative selection using greedy method
@@ -410,7 +505,7 @@ def skder_main():
 			util.runCmd(skder_sum_cmd, logObject, check_files=[genome_summary_file])
 
 			sorted_genome_summary_file = outdir + 'Genome_Information_for_Greedy_Clustering.sorted.txt'
-			sort_cmd = ['sort', '-k', '2', '-gr', genome_summary_file, '>', sorted_genome_summary_file]
+			sort_cmd = ['sort', '-k', '2', '--parallel=' + str(threads), '-gr', genome_summary_file, '>', sorted_genome_summary_file]
 			util.runCmd(sort_cmd, logObject, check_files=[sorted_genome_summary_file])
 
 			# greedy clustering
@@ -425,7 +520,10 @@ def skder_main():
 					ls = line.split('\t')
 					for g in ls[2].split('; '):
 						already_accounted.add(g)
-					skder_result_handle.write(curr_g + '\n')
+					if filter_mge_flag:
+						skder_result_handle.write(mge_proc_to_unproc_mapping[curr_g] + '\n')
+					else:
+						skder_result_handle.write(curr_g + '\n')
 			skder_result_handle.close()
 
 		# copy over genomes which are non-redundant to a separate directory
@@ -457,7 +555,10 @@ def skder_main():
 			with open(skder_result_file) as osrf:
 				for line in osrf:
 					line = line.strip()
-					rep_genomes.add(line)
+					if filter_mge_flag:
+						rep_genomes.add(mge_unproc_to_proc_mapping[line])
+					else:
+						rep_genomes.add(line)
 					scrf_handle.write(line + '\t' + line + '\t100.0\t100.0\trepresentative_to_self\n')
 
 			best_rep_match_at_default_af = defaultdict(lambda: [set(["NA"]), 0.0, 0.0])
@@ -506,26 +607,52 @@ def skder_main():
 								elif qaf == best_rep_match_at_loose_af[que][2]:
 									best_rep_match_at_loose_af[que][0].add(ref)				
 												
-			strict_nearest_ref_found = set([])
-			for gen in best_rep_match_at_default_af:
-				if best_rep_match_at_default_af[gen][0] != 'NA':
-					strict_nearest_ref_found.add(gen)
-					if best_rep_match_at_default_af[gen][1] >= specified_ani_cutoff:
-						scrf_handle.write('\t'.join([gen, ', '.join(best_rep_match_at_default_af[gen][0]), 
-										str(best_rep_match_at_default_af[gen][1]), 
-										str(best_rep_match_at_default_af[gen][2]), 
-										'within_cutoffs_requested']) + '\n')
-					else:
-						scrf_handle.write('\t'.join([gen, ', '.join(best_rep_match_at_default_af[gen][0]), 
-						str(best_rep_match_at_default_af[gen][1]), 
-						str(best_rep_match_at_default_af[gen][2]), 
-						'outside_cutoffs_requested']) + '\n')
-			for gen in best_rep_match_at_loose_af:
-				if gen in strict_nearest_ref_found: continue
-				scrf_handle.write('\t'.join([gen, ', '.join(best_rep_match_at_loose_af[gen][0]), 
-								str(best_rep_match_at_loose_af[gen][1]), 
-								str(best_rep_match_at_loose_af[gen][2]), 
-								'outside_cutoffs_requested']) + '\n')
+			if filter_mge_flag:
+				strict_nearest_ref_found = set([])
+				for gen in best_rep_match_at_default_af:
+					if best_rep_match_at_default_af[gen][0] != 'NA':
+						strict_nearest_ref_found.add(gen)
+						if best_rep_match_at_default_af[gen][1] >= specified_ani_cutoff:
+							scrf_handle.write('\t'.join([mge_proc_to_unproc_mapping[gen], 
+									        ', '.join([mge_proc_to_unproc_mapping[x] for x in best_rep_match_at_default_af[gen][0]]), 
+											str(best_rep_match_at_default_af[gen][1]), 
+											str(best_rep_match_at_default_af[gen][2]), 
+											'within_cutoffs_requested']) + '\n')
+						else:
+							scrf_handle.write('\t'.join([mge_proc_to_unproc_mapping[gen], 
+									', '.join([mge_proc_to_unproc_mapping[x] for x in best_rep_match_at_default_af[gen][0]]), 
+								    str(best_rep_match_at_default_af[gen][1]), 
+									str(best_rep_match_at_default_af[gen][2]), 
+									'outside_cutoffs_requested']) + '\n')
+				for gen in best_rep_match_at_loose_af:
+					if gen in strict_nearest_ref_found: continue
+					scrf_handle.write('\t'.join([mge_proc_to_unproc_mapping[gen], 
+								    ', '.join([mge_proc_to_unproc_mapping[x] for x in best_rep_match_at_loose_af[gen][0]]), 
+									str(best_rep_match_at_loose_af[gen][1]), 
+									str(best_rep_match_at_loose_af[gen][2]), 
+									'outside_cutoffs_requested']) + '\n')
+
+			else:
+				strict_nearest_ref_found = set([])
+				for gen in best_rep_match_at_default_af:
+					if best_rep_match_at_default_af[gen][0] != 'NA':
+						strict_nearest_ref_found.add(gen)
+						if best_rep_match_at_default_af[gen][1] >= specified_ani_cutoff:
+							scrf_handle.write('\t'.join([gen, ', '.join(best_rep_match_at_default_af[gen][0]), 
+											str(best_rep_match_at_default_af[gen][1]), 
+											str(best_rep_match_at_default_af[gen][2]), 
+											'within_cutoffs_requested']) + '\n')
+						else:
+							scrf_handle.write('\t'.join([gen, ', '.join(best_rep_match_at_default_af[gen][0]), 
+							str(best_rep_match_at_default_af[gen][1]), 
+							str(best_rep_match_at_default_af[gen][2]), 
+							'outside_cutoffs_requested']) + '\n')
+				for gen in best_rep_match_at_loose_af:
+					if gen in strict_nearest_ref_found: continue
+					scrf_handle.write('\t'.join([gen, ', '.join(best_rep_match_at_loose_af[gen][0]), 
+									str(best_rep_match_at_loose_af[gen][1]), 
+									str(best_rep_match_at_loose_af[gen][2]), 
+									'outside_cutoffs_requested']) + '\n')
 
 			scrf_handle.close()
 
@@ -541,5 +668,4 @@ def skder_main():
 	sys.exit(0)
 
 if __name__ == '__main__':
-	multiprocessing.set_start_method('fork')
 	skder_main()

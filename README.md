@@ -36,6 +36,39 @@ conda create -n skder_env -c conda-forge -c bioconda skder
 conda activate skder_env
 ```
 
+#### installation with mgecut (for removing MGEs prior to dereplication assessment)
+
+To also use the option to prune out positions corresponding to MGEs using either PhiSpy or geNomad
+
+```bash
+conda create -n skder_env -c conda-forge -c bioconda skder genomad phispy "keras>=2.7,<3.0" "tensorflow>=2.7,<2.16"
+conda activate skder_env
+```
+
+### Docker 
+
+*Coming soon!*
+
+<!---
+Download the bash wrapper script to simplify usage for skDER or CiDDER:
+
+```bash
+
+
+# make executable
+chmod a+x run_skDER.sh
+```
+
+Optionally, if you are interested in filtering MGEs using geNomad, download the relevant databases:
+
+```bash
+wget https://zenodo.org/records/8339387/files/genomad_db_v1.5.tar.gz?download=1
+mv genomad_db_v1.5* genomad_db_v1.5.tar.gz
+tar -zxvf genomad_db_v1.5.tar.gz
+```
+
+-->
+
 ### Conda Manual
 
 ```bash
@@ -317,6 +350,13 @@ If you use CiDDER, please also consider citing pyrodigal (for gene-calling) and 
 > [CD-HIT: accelerated for clustering the next-generation sequencing data](https://academic.oup.com/bioinformatics/article/28/23/3150/192160)
 
 > [Pyrodigal: Python bindings and interface to Prodigal, an efficient method for gene prediction in prokaryotes](https://joss.theoj.org/papers/10.21105/joss.04296)
+
+If you use mgecut (for removal of predicted MGEs) then please cite either PhiSpy (default) or geNomad for their annotation:
+
+
+> [Identification of mobile genetic elements with geNomad](https://pubmed.ncbi.nlm.nih.gov/37735266/)
+
+> [_PhiSpy_: a novel algorithm for finding prophages in bacterial genomes that combines similarity- and composition-based strategies](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3439882/)
 
 
 ## Acknowledgments

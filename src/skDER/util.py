@@ -4,8 +4,11 @@ import logging
 import traceback
 import pyfastx
 import subprocess
+import numpy
+from itertools import groupby
 from Bio import SeqIO
 import gzip
+from collections import defaultdict
 
 def createLoggerObject(log_file):
 	"""
@@ -65,7 +68,8 @@ def setupDirectories(directories):
 		sys.exit(1)
 
 def runCmd(cmd, logObject, check_files=[], check_directories=[], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL):
-	logObject.info('Running %s' % ' '.join(cmd))
+	if logObject != None:
+		logObject.info('Running %s' % ' '.join(cmd))
 	try:
 		subprocess.call(' '.join(cmd), shell=True, stdout=stdout, stderr=stderr,
 						executable='/bin/bash')
@@ -73,10 +77,12 @@ def runCmd(cmd, logObject, check_files=[], check_directories=[], stdout=subproce
 			assert (os.path.isfile(cf))
 		for cd in check_directories:
 			assert (os.path.isdir(cd))
-		logObject.info('Successfully ran: %s' % ' '.join(cmd))
+		if logObject != None:
+			logObject.info('Successfully ran: %s' % ' '.join(cmd))
 	except:
-		logObject.error('Had an issue running: %s' % ' '.join(cmd))
-		logObject.error(traceback.format_exc())
+		if logObject != None:
+			logObject.error('Had an issue running: %s' % ' '.join(cmd))
+			logObject.error(traceback.format_exc())
 		raise RuntimeError('Had an issue running: %s' % ' '.join(cmd))
 
 
@@ -103,7 +109,7 @@ def divide_chunks(l, n):
 	for i in range(0, len(l), n):
 		yield l[i:i + n]
 
-def compute_n50(inputs):
+def compute_n50_pyfastx(inputs):
 	"""
 	Uses pyfastx
 	"""
@@ -128,6 +134,44 @@ def compute_n50(inputs):
 		output_handle.write(input_fasta + '\t' + str(n50) + '\n')
 	output_handle.close()
 
+
+def compute_n50(inputs):
+	input_fastas, output_file, index_locally_flag = inputs
+	output_handle = open(output_file, 'w')
+	for input_fasta in input_fastas:
+		n50 = n50_calc(input_fasta)
+		output_handle.write(input_fasta + '\t' + str(n50) + '\n')
+	output_handle.close()
+
+def n50_calc(genome_file):
+	#Solution adapted from dinovski:
+	#https://gist.github.com/dinovski/2bcdcc770d5388c6fcc8a656e5dbe53c
+	lengths = []
+	seq = ""
+	with open(genome_file) as fasta:
+		for line in fasta:
+			if line.startswith('>'):
+				if seq != "":
+					lengths.append(len(seq))
+				seq = ""
+			else:
+				seq += line.strip()
+	if seq != "":
+		lengths.append(len(seq))
+
+	## sort contigs longest>shortest
+	all_len=sorted(lengths, reverse=True)
+	csum=numpy.cumsum(all_len)
+
+	n2=int(sum(lengths)/2)
+
+	# get index for cumsum >= N/2
+	csumn2=min(csum[csum >= n2])
+	ind=numpy.where(csum == csumn2)
+	n50 = all_len[int(ind[0])]
+	return(n50)
+
+
 def multiProcess(inputs):
 	"""
 	Genralizable function to be used with multiprocessing to parallelize list of commands. Inputs should correspond
@@ -140,3 +184,104 @@ def multiProcess(inputs):
 						executable='/bin/bash')
 	except Exception as e:
 		sys.stderr.write(traceback.format_exc())
+
+def filterGenomeUsingPhiSpy(phispy_annot_file, genome_file, filtered_genome_file):
+	"""
+	Filter genome using phage coordinate predictions from PhiSpy
+	"""
+	try:
+		mge_coords = defaultdict(set)
+		with open(phispy_annot_file) as opaf:
+			for line in opaf:
+				line = line.strip()
+				ls = line.split('\t')
+				scaffold, start, end = ls[1:4]
+				start = int(start)
+				end = int(end)
+				for pos in range(start, end+1):
+					mge_coords[scaffold].add(pos)
+
+		outf = open(filtered_genome_file, 'w')
+		with open(genome_file) as ogf:
+			for rec in SeqIO.parse(ogf, 'fasta'):
+				scaffold = rec.id
+				if scaffold in mge_coords:
+					nonmge_stretch = ''
+					nonmge_stretch_id = 1
+					for i, allele in enumerate(str(rec.seq)):
+						pos = i + 1
+						if pos in mge_coords[scaffold]:
+							if nonmge_stretch != '':
+								nsid = scaffold + '_' + str(nonmge_stretch_id)
+								outf.write('>' + nsid + '\n' + str(nonmge_stretch) + '\n')
+								nonmge_stretch_id += 1
+							nonmge_stretch = ''
+						else:
+							nonmge_stretch += allele
+					if nonmge_stretch != '':
+						nsid = scaffold + '_' + str(nonmge_stretch_id)
+						outf.write('>' + nsid + '\n' + str(nonmge_stretch) + '\n')
+				else:
+					outf.write('>' + rec.id + '_1\n' + str(rec.seq) + '\n')
+		outf.close()
+	except:
+		sys.stderr.write('Issue with filtering genome based on MGE coords determined by PhiSpy.\n')
+		sys.stderr.write(traceback.format_exc())
+		sys.exit(1)
+
+
+def filterGenomeUsingGeNomad(genomad_phage_annot_file, genomad_plasmid_annot_file, genome_file, filtered_genome_file):
+	"""
+	Filter genome using phage coordinate predictions from geNomad
+	"""
+	try:
+		phage_coords = defaultdict(set)
+		with open(genomad_phage_annot_file) as opaf:
+			for i, line in enumerate(opaf):
+				if i == 0: continue
+				line = line.strip()
+				ls = line.split('\t')
+				scaffold = '|'.join(ls[0].split('|')[:-1])
+				start = int(ls[3].split('-')[0])
+				end = int(ls[3].split('-')[1])
+				for pos in range(start, end+1):
+					phage_coords[scaffold].add(pos)
+
+		plasmid_scaffs = set([])
+		with open(genomad_plasmid_annot_file) as opaf:
+			for i, line in enumerate(opaf):
+				if i == 0: continue
+				line = line.strip()
+				ls = line.split('\t')
+				scaffold = ls[0]
+				plasmid_scaffs.add(scaffold)
+
+		outf = open(filtered_genome_file, 'w')
+		with open(genome_file) as ogf:
+			for rec in SeqIO.parse(ogf, 'fasta'):
+				scaffold = rec.id
+				if scaffold in plasmid_scaffs:
+					continue
+				elif scaffold in phage_coords:
+					nonmge_stretch = ''
+					nonmge_stretch_id = 1
+					for i, allele in enumerate(str(rec.seq)):
+						pos = i + 1
+						if pos in phage_coords[scaffold]:
+							if nonmge_stretch != '':
+								nsid = scaffold + '_' + str(nonmge_stretch_id)
+								outf.write('>' + nsid + '\n' + str(nonmge_stretch) + '\n')
+								nonmge_stretch_id += 1
+							nonmge_stretch = ''
+						else:
+							nonmge_stretch += allele
+					if nonmge_stretch != '':
+						nsid = scaffold + '_' + str(nonmge_stretch_id)
+						outf.write('>' + nsid + '\n' + str(nonmge_stretch) + '\n')
+				else:
+					outf.write('>' + rec.id + '_1\n' + str(rec.seq) + '\n')
+		outf.close()
+	except:
+		sys.stderr.write('Issue with filtering genome based on MGE coords determined by geNomad.\n')
+		sys.stderr.write(traceback.format_exc())
+		sys.exit(1)

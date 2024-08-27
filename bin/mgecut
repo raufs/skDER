@@ -1,0 +1,186 @@
+#!/usr/bin/env python3
+
+### Program: mgecut
+### Author: Rauf Salamzade
+### Kalan Lab
+### UW Madison, Department of Medical Microbiology and Immunology
+
+# BSD 3-Clause License
+#
+# Copyright (c) 2023, Rauf Salamzade
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
+import os
+import sys
+from skDER import util
+from time import sleep
+import argparse
+import pkg_resources
+import traceback
+
+version = pkg_resources.require("skDER")[0].version
+
+VALID_METHODS = set(['phispy', 'genomad'])
+
+def create_parser():
+	""" Parse arguments """
+	parser = argparse.ArgumentParser(description="""
+	Program: mgecut
+	Author: Rauf Salamzade
+	Affiliation: Kalan Lab, UW Madison, McMaster University
+								  
+	mgecut: mobile-genetic-element (MGE) removal from bacterial genomic assemblies.	
+
+	mgecut uses either PhiSpy (faster, less accurate & sensitive, designed only for 
+	phages) or geNomad (slower, more accurate - designed for phages and plasmids) to 
+	detect MGEs and then processes the results to remove MGE regions in genomes. 
+	
+	Please cite either PhiSpy or geNomad depending on which method you use:
+								  
+    - PhiSpy: a novel algorithm for finding prophages in bacterial genomes that combines 
+	  similarity- and composition-based strategies. Nucleic Acids Research. 
+      Akhter, Aziz, and Edwards, 2012
+	
+	- Identification of mobile genetic elements with geNomad. Nature Biotechnology. 
+	  Camargo et al. 2023
+	""", formatter_class=argparse.RawTextHelpFormatter)
+
+	parser.add_argument('-i', '--input-genome', help="Path to input genome.", required=True)
+	parser.add_argument('-o', '--filtered-genome', help="Path to resulting filtered genome for MGEs.", required=True)
+	parser.add_argument('-d', '--mge-predict-dir', help="Path to directory where geNomad and PhiSpy results and other intermediate files will be written.", required=True)
+	parser.add_argument('-m', '--method', help="Method to use for MGE annotation. Options are 'phispy' and 'genomad' [Default is phispy].", required=False, default="phispy")
+	parser.add_argument('-gd', '--genomad-db', help="Path to geNomad database. Required if geNomad is requested.", required=False, default=None)
+	parser.add_argument('-gs', '--genomad-splits', type=int, help="The number of split operations in geNomad end-to-end run to keep memory down [Default is 8].", required=False, default=8)
+	parser.add_argument('-c', '--threads', type=int, help="Number of threads/processes to use [Default is 1].", required=False, default=1)
+	parser.add_argument('-v', '--version', action='store_true', help="Report version of mgecut.", required=False, default=False)
+	args = parser.parse_args()
+	return args
+
+def mgecut():
+	if len(sys.argv)>1 and ('-v' in set(sys.argv) or '--version' in set(sys.argv)):
+		sys.stderr.write('Version of mgecut being used is: ' + str(version) + '\n')
+		sys.exit(0)
+	
+	# Parse arguments
+	myargs = create_parser()
+
+	input_genome = os.path.abspath(myargs.input_genome)
+	output_genome = os.path.abspath(myargs.filtered_genome)
+	tmp_dir = os.path.abspath(myargs.mge_predict_dir) + '/'
+	method = myargs.method.lower()
+	genomad_splits = myargs.genomad_splits
+	genomad_db = myargs.genomad_db
+	threads = myargs.threads
+
+	if os.path.isdir(tmp_dir):
+		sys.stderr.write('Warning: either the directory provided for --mge-predict-dir or the file for --filtered-genome already exist.\nWill be overwriting in 5 seconds...\n')
+		sleep(5)
+	util.setupDirectories([tmp_dir])
+
+	if input_genome.endswith('.gz'):
+		try:
+			os.system('cp %s %s' % (input_genome, tmp_dir))
+			os.system('gunzip %s' % tmp_dir + input_genome.split('/')[-1])
+			input_genome = tmp_dir + input_genome.split('/')[-1].split('.gz')[0]
+			assert(os.path.isfile(input_genome))
+		except:
+			sys.stderr.write('Unable to uncompress apparently gzipped input genome.\n')
+
+	try:
+		assert(util.is_fasta(input_genome))
+	except:
+		sys.stderr.write('Unable to validate input genome %s is in FASTA format.' % input_genome)
+		
+	try:
+		assert(method in VALID_METHODS)
+	except:
+		sys.stderr.write('Selection mode requested not valid, must be either "genomad" or  "phispy".\n')
+		sys.exit(1)
+
+	if method == 'phispy':
+		sys.stderr.write('Using PhiSpy to predict and cut out MGEs from genome assembly!\n')
+		expected_gbk = tmp_dir + 'Sample.gbk'
+		gbk_create_cmd = ['runProdigalAndMakeProperGenbank.py', '-i', input_genome, '-o', tmp_dir]
+		try:
+			util.runCmd(gbk_create_cmd, None, check_files=[expected_gbk])
+		except:
+			sys.stderr.write('Issue performing gene-calling via pyrodigal and creating a GenBank file to use as the PhiSpy input.\n')
+			sys.stderr.write(traceback.format_exc() + '\n')
+			sys.exit(1)
+		phispy_results = tmp_dir + 'PhiSpy_Results/'
+		phispy_cmd = ['phispy', expected_gbk, '-o', phispy_results, '--threads', str(threads),
+				      '--phage_genes', '0']
+		prophage_coords_tsv = phispy_results + 'prophage_coordinates.tsv'
+		try:
+			util.runCmd(phispy_cmd, None, check_directories=[phispy_results], check_files=[prophage_coords_tsv])
+		except:
+			sys.stderr.write('Issue with running PhiSpy command: %s.\n' % ' '.join(phispy_cmd))
+			sys.stderr.write(traceback.format_exc() + '\n')
+			sys.exit(1)
+		util.filterGenomeUsingPhiSpy(prophage_coords_tsv, input_genome, output_genome)
+
+	elif method == 'genomad':
+		sys.stdout.write('Using geNomad to predict and cut out MGEs from genome assembly!\n')
+		try:
+			assert(genomad_db != None and os.path.isdir(genomad_db))
+		except:
+			sys.stderr.write('geNomad requested as method but no or invalid path to the geNomad database provided via --genomad-db.\n')
+			sys.exit(1)
+
+		genomad_results = tmp_dir + 'geNomad_Results/'
+		genomad_cmd = ['genomad', 'end-to-end', '--cleanup', '--threads', str(threads), '--splits', 
+				       str(genomad_splits), input_genome, genomad_results, genomad_db]
+		prophage_coords_tsv = None
+		plasmid_coords_tsv = None
+		try:
+			util.runCmd(genomad_cmd, None, check_directories=[genomad_results])
+						
+			for subdir, dirs, files in os.walk(genomad_results):
+				for file in files:
+					filepath = subdir + os.sep + file
+					if filepath.endswith("_plasmid_summary.tsv"):
+						plasmid_coords_tsv = filepath
+					elif filepath.endswith("_virus_summary.tsv"):
+						prophage_coords_tsv = filepath
+			assert(prophage_coords_tsv != None and os.path.isfile(prophage_coords_tsv))
+			assert(plasmid_coords_tsv != None and os.path.isfile(plasmid_coords_tsv))
+		except:
+			sys.stderr.write('Issue with running geNomad command: %s.\n' % ' '.join(genomad_cmd))
+			sys.stderr.write(traceback.format_exc() + '\n')
+			sys.exit(1)			
+		
+		util.filterGenomeUsingGeNomad(prophage_coords_tsv, plasmid_coords_tsv, input_genome, output_genome)
+
+	# success!
+	sys.exit(0)
+
+if __name__ == '__main__':
+	mgecut()

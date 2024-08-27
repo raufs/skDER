@@ -51,6 +51,7 @@ import multiprocessing
 import traceback
 from Bio import SeqIO
 from operator import itemgetter
+import math
 
 version = pkg_resources.require("skDER")[0].version
 
@@ -93,6 +94,8 @@ def create_parser():
 	parser.add_argument('-ts', '--total-saturation', type=float, help="The percentage of total proteins clusters needed to stop representative\ngenome selection [Default is 90.0].", required=False, default=90.0)
 	parser.add_argument('-mgs', '--multi-genome-saturation', type=float, help="The percentage of total multi-genome protein clusters needed to stop\nrepresentative genome selection [Default is 100.0].", required=False, default=100.0)
 	parser.add_argument('-s', '--sanity-check', action='store_true', help="Confirm each FASTA file provided or downloaded is actually\na FASTA file. Makes it slower, but generally\ngood practice.", required=False, default=False)
+	parser.add_argument('-fm', '--filter-mge', action='store_true', help="Filter predicted MGE coordinates along genomes before dereplication assessment but after N50 computation.", required=False, default=False)
+	parser.add_argument('-gd', '--genomad-database', help="If filter-mge is specified, it will by default use PhiSpy; however, if a database directory for geNomad is provided - it will use that instead to predict MGEs.", default=None, required=False)
 	parser.add_argument('-n', '--determine-clusters', action='store_true', help="Perform secondary clustering to assign non-representative\ngenomes to their closest representative genomes based on shared protein clusters.", required=False, default=False)
 	parser.add_argument('-ns', '--determine-clusters-skani', action='store_true', help="Perform secondary clustering to assign non-representative\ngenomes to their closest representative genomes based on skani-computed ANI.", required=False, default=False)
 	parser.add_argument('-l', '--symlink', action='store_true', help="Symlink representative genomes in results subdirectory\ninstead of performing a copy of the files.", required=False, default=False)
@@ -130,6 +133,16 @@ def cidder_main():
 	ncbi_nlm_url_flag = myargs.ncbi_nlm_url
 	determine_clusters_flag = myargs.determine_clusters
 	determine_clusters_ani_flag = myargs.determine_clusters_skani
+	filter_mge_flag = myargs.filter_mge
+	genomad_database = myargs.genomad_database
+
+	if genomad_database != None:
+		sys.stdout.write('Attempting to use geNomad to predict and cut out MGEs from genome assembly!\n')
+		try:
+			assert(genomad_database != None and os.path.isdir(genomad_database))
+		except:
+			sys.stderr.write('geNomad requested as method but no or invalid path to the geNomad database provided via --genomad-db.\n')
+			sys.exit(1)
 
 	ngd_url = "https://ftp.ncbi.nih.gov/genomes"
 	if ncbi_nlm_url_flag:
@@ -264,6 +277,40 @@ def cidder_main():
 			gf_listing_handle.write(gf + '\n')
 		gf_listing_handle.close()
 
+	if filter_mge_flag:
+		mgecut_processed_dir = outdir + 'mgecut_processed_genomes/'
+		mgecut_tmp_dir = outdir + 'mgecut_tmp/'
+		util.setupDirectories([mgecut_processed_dir, mgecut_tmp_dir])
+
+		parallel_jobs_4thread = max(math.floor(threads / 4), 1)
+		multi_thread = 4
+		if threads < 4:
+			multi_thread = threads
+			parallel_jobs_4thread = 1
+
+		mgecut_cmds = []
+		with open(all_genomes_listing_file) as oaglf:
+			for line in oaglf:
+				genome = line.strip()
+				proc_genome = mgecut_processed_dir + genome.split('/')[-1]
+				tmp_dir = mgecut_tmp_dir + genome.split('/')[-1]
+				mgecut_cmd = ['mgecut', '-i', genome, '-o', proc_genome, '-d', tmp_dir, 
+				              '-c', str(multi_thread)]
+				if genomad_database != None:
+					mgecut_cmd += ['-m', 'genomad', '-gd', genomad_database]
+				mgecut_cmds.append(mgecut_cmd)
+		p = multiprocessing.Pool(parallel_jobs_4thread)
+		p.map(util.multiProcess, mgecut_cmds)
+		p.close()
+
+		genome_listing_mgecut_file = outdir + 'mgecut_Processed_Genomes_Listing.txt'
+		glmf_handle = open(genome_listing_mgecut_file, 'w')
+		for f in os.listdir(mgecut_processed_dir):
+			mgecut_genome_file = mgecut_processed_dir + f
+			glmf_handle.write(mgecut_genome_file + '\n')
+		glmf_handle.close()
+		all_genomes_listing_file = genome_listing_mgecut_file
+	
 	pyrodigal_resdir = outdir + 'pyrodigal_results/'
 	util.setupDirectories([pyrodigal_resdir])
 

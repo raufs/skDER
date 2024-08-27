@@ -17,3 +17,5 @@ dependencies:
   - pandas
   - pyrodigal
   - bioconda::cd-hit
+  - genomad
+  - phispy
