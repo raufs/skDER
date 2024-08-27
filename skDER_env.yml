@@ -11,7 +11,6 @@ dependencies:
   - "biopython>=1.7"
   - bioconda::skani
   - bioconda::ncbi-genome-download
-  - bioconda::pyfastx
   - seaborn
   - matplotlib
   - pandas

@@ -2,10 +2,8 @@ import os
 import sys
 import logging
 import traceback
-import pyfastx
 import subprocess
 import numpy
-from itertools import groupby
 from Bio import SeqIO
 import gzip
 from collections import defaultdict
@@ -109,10 +107,10 @@ def divide_chunks(l, n):
 	for i in range(0, len(l), n):
 		yield l[i:i + n]
 
+"""
+# No longer used.
 def compute_n50_pyfastx(inputs):
-	"""
-	Uses pyfastx
-	"""
+	# Uses pyfastx
 	input_fastas, output_file, index_locally_flag = inputs
 	output_handle = open(output_file, 'w')
 	for input_fasta in input_fastas:
@@ -133,10 +131,10 @@ def compute_n50_pyfastx(inputs):
 			pass
 		output_handle.write(input_fasta + '\t' + str(n50) + '\n')
 	output_handle.close()
-
+"""
 
 def compute_n50(inputs):
-	input_fastas, output_file, index_locally_flag = inputs
+	input_fastas, output_file = inputs
 	output_handle = open(output_file, 'w')
 	for input_fasta in input_fastas:
 		n50 = n50_calc(input_fasta)
@@ -235,32 +233,36 @@ def filterGenomeUsingGeNomad(genomad_phage_annot_file, genomad_plasmid_annot_fil
 	Filter genome using phage coordinate predictions from geNomad
 	"""
 	try:
+		full_phage_or_plasmid_scaffs = set([])
 		phage_coords = defaultdict(set)
 		with open(genomad_phage_annot_file) as opaf:
 			for i, line in enumerate(opaf):
 				if i == 0: continue
 				line = line.strip()
 				ls = line.split('\t')
-				scaffold = '|'.join(ls[0].split('|')[:-1])
-				start = int(ls[3].split('-')[0])
-				end = int(ls[3].split('-')[1])
-				for pos in range(start, end+1):
-					phage_coords[scaffold].add(pos)
+				if ls[3] == 'NA':
+					scaffold = ls[0]
+					full_phage_or_plasmid_scaffs.add(scaffold)
+				else:
+					scaffold = '|'.join(ls[0].split('|')[:-1])
+					start = int(ls[3].split('-')[0])
+					end = int(ls[3].split('-')[1])
+					for pos in range(start, end+1):
+						phage_coords[scaffold].add(pos)
 
-		plasmid_scaffs = set([])
 		with open(genomad_plasmid_annot_file) as opaf:
 			for i, line in enumerate(opaf):
 				if i == 0: continue
 				line = line.strip()
 				ls = line.split('\t')
 				scaffold = ls[0]
-				plasmid_scaffs.add(scaffold)
+				full_phage_or_plasmid_scaffs.add(scaffold)
 
 		outf = open(filtered_genome_file, 'w')
 		with open(genome_file) as ogf:
 			for rec in SeqIO.parse(ogf, 'fasta'):
 				scaffold = rec.id
-				if scaffold in plasmid_scaffs:
+				if scaffold in full_phage_or_plasmid_scaffs:
 					continue
 				elif scaffold in phage_coords:
 					nonmge_stretch = ''

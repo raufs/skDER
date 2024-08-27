@@ -81,6 +81,11 @@ def create_parser():
 								  
 	For information on how to alter CD-HIT parameters, please see: 
 	https://github.com/weizhongli/cdhit/blob/master/doc/cdhit-user-guide.wiki#cd-hit
+
+	Note, if --filter-mge is requested, the statistics reported in clustering reports (number 
+	of proteins overlapping, ANI) in the clustering reports will all be based on processed 
+	(MGE filtered) genomes. However, the final representative genomes in the 
+	Dereplicated_Representative_Genomes/ folder will be the original unprocesed genomes.
 	""", formatter_class=argparse.RawTextHelpFormatter)
 
 	parser.add_argument('-g', '--genomes', nargs='+', help='Genome assembly files in (gzipped) FASTA format\n(accepted suffices are: *.fasta,\n*.fa, *.fas, or *.fna) [Optional].', required=False, default=[])
@@ -94,8 +99,8 @@ def create_parser():
 	parser.add_argument('-ts', '--total-saturation', type=float, help="The percentage of total proteins clusters needed to stop representative\ngenome selection [Default is 90.0].", required=False, default=90.0)
 	parser.add_argument('-mgs', '--multi-genome-saturation', type=float, help="The percentage of total multi-genome protein clusters needed to stop\nrepresentative genome selection [Default is 100.0].", required=False, default=100.0)
 	parser.add_argument('-s', '--sanity-check', action='store_true', help="Confirm each FASTA file provided or downloaded is actually\na FASTA file. Makes it slower, but generally\ngood practice.", required=False, default=False)
-	parser.add_argument('-fm', '--filter-mge', action='store_true', help="Filter predicted MGE coordinates along genomes before dereplication assessment but after N50 computation.", required=False, default=False)
-	parser.add_argument('-gd', '--genomad-database', help="If filter-mge is specified, it will by default use PhiSpy; however, if a database directory for geNomad is provided - it will use that instead to predict MGEs.", default=None, required=False)
+	parser.add_argument('-fm', '--filter-mge', action='store_true', help="Filter predicted MGE coordinates along genomes before\ndereplication assessment but after N50\ncomputation.", required=False, default=False)
+	parser.add_argument('-gd', '--genomad-database', help="If filter-mge is specified, it will by default use PhiSpy;\nhowever, if a database directory for\ngeNomad is provided - it will use that instead\nto predict MGEs.", default=None, required=False)
 	parser.add_argument('-n', '--determine-clusters', action='store_true', help="Perform secondary clustering to assign non-representative\ngenomes to their closest representative genomes based on shared protein clusters.", required=False, default=False)
 	parser.add_argument('-ns', '--determine-clusters-skani', action='store_true', help="Perform secondary clustering to assign non-representative\ngenomes to their closest representative genomes based on skani-computed ANI.", required=False, default=False)
 	parser.add_argument('-l', '--symlink', action='store_true', help="Symlink representative genomes in results subdirectory\ninstead of performing a copy of the files.", required=False, default=False)
@@ -277,6 +282,7 @@ def cidder_main():
 			gf_listing_handle.write(gf + '\n')
 		gf_listing_handle.close()
 
+	mge_proc_to_unproc_mapping = {}
 	if filter_mge_flag:
 		mgecut_processed_dir = outdir + 'mgecut_processed_genomes/'
 		mgecut_tmp_dir = outdir + 'mgecut_tmp/'
@@ -293,6 +299,7 @@ def cidder_main():
 			for line in oaglf:
 				genome = line.strip()
 				proc_genome = mgecut_processed_dir + genome.split('/')[-1]
+				mge_proc_to_unproc_mapping[proc_genome] = genome
 				tmp_dir = mgecut_tmp_dir + genome.split('/')[-1]
 				mgecut_cmd = ['mgecut', '-i', genome, '-o', proc_genome, '-d', tmp_dir, 
 				              '-c', str(multi_thread)]
@@ -427,8 +434,11 @@ def cidder_main():
 			sys.stdout.write(msg + '\n')
 			logObject.info(msg)
 			genome_path = genome_name_to_path[gc[0]]
+			if genome_path in mge_proc_to_unproc_mapping:
+				genome_path = mge_proc_to_unproc_mapping[genome_path]
 			if symlink:
 				symlink_file = cidder_drep_dir + genome_path.split('/')[-1]
+				
 				os.symlink(genome_path, symlink_file)
 			else:
 				shutil.copy2(genome_path, cidder_drep_dir)
@@ -464,6 +474,8 @@ def cidder_main():
 
 			if new_rep != None:
 				genome_path = genome_name_to_path[new_rep]
+				if genome_path in mge_proc_to_unproc_mapping:
+					genome_path = mge_proc_to_unproc_mapping[genome_path]
 				if symlink:
 					symlink_file = cidder_drep_dir + genome_path.split('/')[-1]
 					os.symlink(genome_path, symlink_file)
@@ -519,7 +531,8 @@ def cidder_main():
 				else:
 					break
 
-			printlist = [genome, ', '.join(sorted(superset_refs)), str(max_containment*100.0), str(len(fpcs)), str(len(rpcs))]
+			printlist = [genome, ', '.join(sorted(superset_refs)), 
+				         str(max_containment*100.0), str(len(fpcs)), str(len(rpcs))]
 			scrf_handle.write('\t'.join(printlist) + '\n')
 
 		scrf_handle.close()
@@ -575,7 +588,7 @@ def cidder_main():
 											
 		for gen in genome_protein_clusters:
 			if gen in rep_genomes: continue
-			scrf_handle.write('\t'.join([gen, ', '.join(best_rep_match_at_default_af[gen][0]), 
+			scrf_handle.write('\t'.join([gen, ', '.join(sorted(best_rep_match_at_default_af[gen][0])), 
 								str(best_rep_match_at_default_af[gen][1]), 
 								str(best_rep_match_at_default_af[gen][2])]) + '\n')
 				
