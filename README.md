@@ -180,7 +180,7 @@ The help function should return the following:
 
 ```
 usage: skder [-h] [-g GENOMES [GENOMES ...]] [-t TAXA_NAME] [-r GTDB_RELEASE] -o OUTPUT_DIRECTORY [-d DEREPLICATION_MODE] [-i PERCENT_IDENTITY_CUTOFF] [-tc] [-f ALIGNED_FRACTION_CUTOFF]
-             [-a MAX_AF_DISTANCE_CUTOFF] [-p SKANI_TRIANGLE_PARAMETERS] [-s] [-n] [-l] [-b] [-u] [-c THREADS] [-v]
+             [-a MAX_AF_DISTANCE_CUTOFF] [-p SKANI_TRIANGLE_PARAMETERS] [-s] [-fm] [-gd GENOMAD_DATABASE] [-n] [-l] [-u] [-c THREADS] [-v]
 
 	Program: skder
 	Author: Rauf Salamzade
@@ -196,6 +196,12 @@ usage: skder [-h] [-g GENOMES [GENOMES ...]] [-t TAXA_NAME] [-r GTDB_RELEASE] -o
 	suited to serve as a representative based on assembly N50 (favoring the more contiguous 
 	assembly) and connectedness (favoring genomes deemed similar to a greater number of 
 	alternate genomes).
+								  
+	Note, if --filter-mge is requested, the original paths to genomes are reported but 
+	the statistics reported in the clustering reports (e.g. ANI, AF) will all be based 
+	on processed (MGE filtered) genomes. Importantly, computation of N50 is performed 
+	before MGE filtering to not penalize genomes of high quality that simply have many 
+	MGEs and enable them to still be selected as representatives.
 	
 
 options:
@@ -233,12 +239,19 @@ options:
   -s, --sanity-check    Confirm each FASTA file provided or downloaded is actually
                         a FASTA file. Makes it slower, but generally
                         good practice.
+  -fm, --filter-mge     Filter predicted MGE coordinates along genomes before
+                        dereplication assessment but after N50
+                        computation.
+  -gd GENOMAD_DATABASE, --genomad-database GENOMAD_DATABASE
+                        If filter-mge is specified, it will by default use PhiSpy;
+                        however, if a database directory for
+                        geNomad is provided - it will use that instead
+                        to predict MGEs.
   -n, --determine-clusters
                         Perform secondary clustering to assign non-representative
                         genomes to their closest representative genomes.
   -l, --symlink         Symlink representative genomes in results subdirectory
                         instead of performing a copy of the files.
-  -b, --index-locally   Build indices locally instead of in the directory of input genomes.
   -u, --ncbi-nlm-url    Try using the NCBI ftp address with '.nlm' for
                         ncbi-genome-download if there are issues.
   -c THREADS, --threads THREADS
@@ -257,7 +270,7 @@ The help function should return the following:
 
 ```
 usage: cidder [-h] [-g GENOMES [GENOMES ...]] [-t TAXA_NAME] [-r GTDB_RELEASE] -o OUTPUT_DIRECTORY [-p CD_HIT_PARAMS] [-mg] [-e] [-a NEW_PROTEINS_NEEDED] [-ts TOTAL_SATURATION]
-              [-mgs MULTI_GENOME_SATURATION] [-s] [-n] [-ns] [-l] [-u] [-c THREADS] [-m MEMORY] [-v]
+              [-mgs MULTI_GENOME_SATURATION] [-s] [-fm] [-gd GENOMAD_DATABASE] [-n] [-ns] [-l] [-u] [-c THREADS] [-m MEMORY] [-v]
 
 	Program: cidder
 	Author: Rauf Salamzade
@@ -279,6 +292,11 @@ usage: cidder [-h] [-g GENOMES [GENOMES ...]] [-t TAXA_NAME] [-r GTDB_RELEASE] -
 								  
 	For information on how to alter CD-HIT parameters, please see: 
 	https://github.com/weizhongli/cdhit/blob/master/doc/cdhit-user-guide.wiki#cd-hit
+
+	Note, if --filter-mge is requested, the statistics reported in clustering reports (number 
+	of proteins overlapping, ANI) in the clustering reports will all be based on processed 
+	(MGE filtered) genomes. However, the final representative genomes in the 
+	Dereplicated_Representative_Genomes/ folder will be the original unprocesed genomes.
 	
 
 options:
@@ -297,8 +315,8 @@ options:
                         Output directory.
   -p CD_HIT_PARAMS, --cd-hit-params CD_HIT_PARAMS
                         CD-HIT parameters to use for clustering proteins - select carefully
-                        (don't set threads or memory - those are done by default in cidder) and surround by quotes
-                        [Default is: "-n 5 -c 0.95 -aL 0.75 -aS 0.90"]
+                        (don't set threads or memory - those are done by default in cidder) and
+                        surround by quotes [Default is: "-n 5 -c 0.95 -aL 0.75 -aS 0.90"]
   -mg, --metagenome-mode
                         Run pyrodigal using metagenome mode.
   -e, --include-edge-orfs
@@ -314,12 +332,22 @@ options:
   -s, --sanity-check    Confirm each FASTA file provided or downloaded is actually
                         a FASTA file. Makes it slower, but generally
                         good practice.
+  -fm, --filter-mge     Filter predicted MGE coordinates along genomes before
+                        dereplication assessment but after N50
+                        computation.
+  -gd GENOMAD_DATABASE, --genomad-database GENOMAD_DATABASE
+                        If filter-mge is specified, it will by default use PhiSpy;
+                        however, if a database directory for
+                        geNomad is provided - it will use that instead
+                        to predict MGEs.
   -n, --determine-clusters
                         Perform secondary clustering to assign non-representative
-                        genomes to their closest representative genomes based on shared protein clusters.
+                        genomes to their closest representative genomes based on shared
+                        protein clusters.
   -ns, --determine-clusters-skani
                         Perform secondary clustering to assign non-representative
-                        genomes to their closest representative genomes based on skani-computed ANI.
+                        genomes to their closest representative genomes based on skani-computed
+                        ANI.
   -l, --symlink         Symlink representative genomes in results subdirectory
                         instead of performing a copy of the files.
   -u, --ncbi-nlm-url    Try using the NCBI ftp address with '.nlm' for
@@ -352,7 +380,6 @@ If you use CiDDER, please also consider citing pyrodigal (for gene-calling) and 
 > [Pyrodigal: Python bindings and interface to Prodigal, an efficient method for gene prediction in prokaryotes](https://joss.theoj.org/papers/10.21105/joss.04296)
 
 If you use mgecut (for removal of predicted MGEs) then please cite either PhiSpy (default) or geNomad for their annotation:
-
 
 > [Identification of mobile genetic elements with geNomad](https://pubmed.ncbi.nlm.nih.gov/37735266/)
 
