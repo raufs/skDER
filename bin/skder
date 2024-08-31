@@ -85,7 +85,7 @@ def create_parser():
 	MGEs and enable them to still be selected as representatives.
 	""", formatter_class=argparse.RawTextHelpFormatter)
 
-	parser.add_argument('-g', '--genomes', nargs='+', help='Genome assembly files in (gzipped) FASTA format\n(accepted suffices are: *.fasta,\n*.fa, *.fas, or *.fna) [Optional].', required=False, default=[])
+	parser.add_argument('-g', '--genomes', nargs='+', help='Genome assembly file paths or paths to containing\ndirectories. Files should be in FASTA format and can be gzipped\n(accepted suffices are: *.fasta,\n*.fa, *.fas, or *.fna) [Optional].', required=False, default=[])
 	parser.add_argument('-t', '--taxa-name', help='Genus or species identifier from GTDB for which to\ndownload genomes for and include in\ndereplication analysis [Optional].', required=False, default=None)
 	parser.add_argument('-r', '--gtdb-release', help='Which GTDB release to use if -t argument issued [Default is R220].', default="R220")
 	parser.add_argument('-o', '--output-directory', help='Output directory.', required=True)
@@ -94,7 +94,7 @@ def create_parser():
 	parser.add_argument('-tc', '--test-cutoffs', action='store_true', help="Assess clustering using various pre-selected cutoffs.", required=False, default=False)
 	parser.add_argument('-f', '--aligned-fraction-cutoff', type=float, help="Aligned cutoff threshold for dereplication - only needed by\none genome [Default is 90.0].", required=False, default=90.0)
 	parser.add_argument('-a', '--max-af-distance-cutoff', type=float, help="Maximum difference for aligned fraction between a pair to\nautomatically disqualify the genome with a higher\nAF from being a representative.", required=False, default=10.0)
-	parser.add_argument('-p', '--skani-triangle-parameters', help="Options for skani triangle. Note ANI and AF cutoffs\nare specified separately and the -E parameter is always\nrequested. [Default is \"\"].", default="", required=False)
+	parser.add_argument('-p', '--skani-triangle-parameters', help="Options for skani triangle. Note ANI and AF cutoffs\nare specified separately and the -E parameter is always\nrequested. [Default is \"-s 90.0\"].", default="-s 90.0", required=False)
 	parser.add_argument('-s', '--sanity-check', action='store_true', help="Confirm each FASTA file provided or downloaded is actually\na FASTA file. Makes it slower, but generally\ngood practice.", required=False, default=False)
 	parser.add_argument('-fm', '--filter-mge', action='store_true', help="Filter predicted MGE coordinates along genomes before\ndereplication assessment but after N50\ncomputation.", required=False, default=False)
 	parser.add_argument('-gd', '--genomad-database', help="If filter-mge is specified, it will by default use PhiSpy;\nhowever, if a database directory for\ngeNomad is provided - it will use that instead\nto predict MGEs.", default=None, required=False)
@@ -157,6 +157,11 @@ def skder_main():
 	except:
 		sys.stderr.write('GTDB release requested is not valid. Valid options include: %s\n' % ' '.join(VALID_GTDB_RELEASES))
 		sys.exit(1)
+	
+	if percent_identity_cutoff < 90.0 and skani_triangle_parameters=="-s 90.0":
+		screen_cutoff = max(percent_identity_cutoff - 10.0, 0.0)
+		skani_triangle_parameters = "-s " + str(screen_cutoff)
+		sys.stderr.write("Warning: ANI threshold requested is lower than 90.0 but the -p\nargument was not changed from the default where skani's screen\nparameter is set to 90.0 - therefore changing to set skani\ntriangle's -s parameter to %f\n" % screen_cutoff)
 
 	if os.path.isdir(outdir):
 		sys.stderr.write("Output directory already exists! Overwriting in 5 seconds...\n")
@@ -273,18 +278,28 @@ def skder_main():
 						gf_listing_handle.close()
 
 	if genomes:
-		symlink_genomes_directory = outdir + 'local_genomes/' 
-		util.setupDirectories([symlink_genomes_directory])
 		gf_listing_handle = open(all_genomes_listing_file, 'a+')
 		for gf in genomes:
-			gf = os.path.abspath(gf)
-			suffix = gf.split('.')[-1].lower()
-			if gf.endswith('.gz'):
-				suffix = '.gz'.join(gf.split('.gz')[:-1]).split('.')[-1].lower()
-			if not suffix in ACCEPTED_SUFFICES: continue
-			if sanity_check:
-				assert(util.is_fasta(gf))
-			gf_listing_handle.write(gf + '\n')
+			if os.path.isfile(gf):
+				gf = os.path.abspath(gf)
+				suffix = gf.split('.')[-1].lower()
+				if gf.endswith('.gz'):
+					suffix = '.gz'.join(gf.split('.gz')[:-1]).split('.')[-1].lower()
+				if not suffix in ACCEPTED_SUFFICES: continue
+				if sanity_check:
+					assert(util.is_fasta(gf))
+				gf_listing_handle.write(gf + '\n')
+			else:
+				gf_dir = os.path.abspath(gf) + '/'
+				for gdf in os.listdir(gf_dir):
+					gdf = os.path.abspath(gf_dir + gdf)
+					suffix = gdf.split('.')[-1].lower()
+					if gdf.endswith('.gz'):
+						suffix = '.gz'.join(gdf.split('.gz')[:-1]).split('.')[-1].lower()
+					if not suffix in ACCEPTED_SUFFICES: continue
+					if sanity_check:
+						assert(util.is_fasta(gdf))
+					gf_listing_handle.write(gdf + '\n')
 		gf_listing_handle.close()
 
 	number_of_genomes = None

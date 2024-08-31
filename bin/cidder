@@ -88,7 +88,7 @@ def create_parser():
 	Dereplicated_Representative_Genomes/ folder will be the original unprocesed genomes.
 	""", formatter_class=argparse.RawTextHelpFormatter)
 
-	parser.add_argument('-g', '--genomes', nargs='+', help='Genome assembly files in (gzipped) FASTA format\n(accepted suffices are: *.fasta,\n*.fa, *.fas, or *.fna) [Optional].', required=False, default=[])
+	parser.add_argument('-g', '--genomes', nargs='+', help='Genome assembly file paths or paths to containing\ndirectories. Files should be in FASTA format and can be gzipped\n(accepted suffices are: *.fasta,\n*.fa, *.fas, or *.fna) [Optional].', required=False, default=[])
 	parser.add_argument('-t', '--taxa-name', help='Genus or species identifier from GTDB for which to\ndownload genomes for and include in\ndereplication analysis [Optional].', required=False, default=None)
 	parser.add_argument('-r', '--gtdb-release', help='Which GTDB release to use if -t argument issued [Default is R220].', default="R220")
 	parser.add_argument('-o', '--output-directory', help='Output directory.', required=True)
@@ -267,19 +267,30 @@ def cidder_main():
 							gf_listing_handle.write(renamed_gfile + '\n')
 						gf_listing_handle.close()
 
+
 	if genomes:
-		symlink_genomes_directory = outdir + 'local_genomes/' 
-		util.setupDirectories([symlink_genomes_directory])
 		gf_listing_handle = open(all_genomes_listing_file, 'a+')
 		for gf in genomes:
-			gf = os.path.abspath(gf)
-			suffix = gf.split('.')[-1].lower()
-			if gf.endswith('.gz'):
-				suffix = '.gz'.join(gf.split('.gz')[:-1]).split('.')[-1].lower()
-			if not suffix in ACCEPTED_SUFFICES: continue
-			if sanity_check:
-				assert(util.is_fasta(gf))
-			gf_listing_handle.write(gf + '\n')
+			if os.path.isfile(gf):
+				gf = os.path.abspath(gf)
+				suffix = gf.split('.')[-1].lower()
+				if gf.endswith('.gz'):
+					suffix = '.gz'.join(gf.split('.gz')[:-1]).split('.')[-1].lower()
+				if not suffix in ACCEPTED_SUFFICES: continue
+				if sanity_check:
+					assert(util.is_fasta(gf))
+				gf_listing_handle.write(gf + '\n')
+			else:
+				gf_dir = os.path.abspath(gf) + '/'
+				for gdf in os.listdir(gf_dir):
+					gdf = os.path.abspath(gf_dir + gdf)
+					suffix = gdf.split('.')[-1].lower()
+					if gdf.endswith('.gz'):
+						suffix = '.gz'.join(gdf.split('.gz')[:-1]).split('.')[-1].lower()
+					if not suffix in ACCEPTED_SUFFICES: continue
+					if sanity_check:
+						assert(util.is_fasta(gdf))
+					gf_listing_handle.write(gdf + '\n')
 		gf_listing_handle.close()
 
 	mge_proc_to_unproc_mapping = {}
