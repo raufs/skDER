@@ -56,7 +56,7 @@ VALID_METHODS = set(['phispy', 'genomad'])
 def create_parser():
 	""" Parse arguments """
 	parser = argparse.ArgumentParser(description="""
-	Program: mgecut
+	Program: granet
 	Author: Rauf Salamzade
 	Affiliation: Kalan Lab, UW Madison, McMaster University
 								  
