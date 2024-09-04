@@ -9,7 +9,7 @@ RUN conda install -n base conda-libmamba-solver
 RUN conda config --set solver libmamba
 RUN conda create -p /usr/src/skder_conda_env/ -c conda-forge -c bioconda skder
 
-# Set env variables and download minimal databases (MIBiG v3.1 + PGAP HMMs)
+# Set env variable PATH
 ENV PATH /usr/src/skder_conda_env/bin:$PATH
 
 # chmod 777 /home changes the permissions of the /home directory

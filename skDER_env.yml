@@ -7,12 +7,13 @@ dependencies:
   - "python>=3.10"
   - setuptools
   - pip
-  - conda-forge::cxx-compiler
+  - cxx-compiler
   - "biopython>=1.7"
-  - bioconda::skani
-  - bioconda::ncbi-genome-download
-  - seaborn
+  - skani
+  - python-igraph
   - matplotlib
+  - ncbi-genome-download
+  - seaborn
   - pandas
   - pyrodigal
   - bioconda::cd-hit

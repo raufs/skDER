@@ -83,13 +83,24 @@ def create_parser():
 	on processed (MGE filtered) genomes. Importantly, computation of N50 is performed 
 	before MGE filtering to not penalize genomes of high quality that simply have many 
 	MGEs and enable them to still be selected as representatives.
-	""", formatter_class=argparse.RawTextHelpFormatter)
+	
+    If you use skDER for your research, please kindly cite both:
+
+    Fast and robust metagenomic sequence comparison through sparse chaining with skani.
+    Nature Methods. Shaw and Yu, 2023.
+
+    and
+    
+    skDER & CiDDER: microbial genome dereplication approaches for comparative genomic 
+    and metagenomic applications. Salamzade, Kottapalli, and Kalan, 2024
+
+    """, formatter_class=argparse.RawTextHelpFormatter)
 
 	parser.add_argument('-g', '--genomes', nargs='+', help='Genome assembly file paths or paths to containing\ndirectories. Files should be in FASTA format and can be gzipped\n(accepted suffices are: *.fasta,\n*.fa, *.fas, or *.fna) [Optional].', required=False, default=[])
 	parser.add_argument('-t', '--taxa-name', help='Genus or species identifier from GTDB for which to\ndownload genomes for and include in\ndereplication analysis [Optional].', required=False, default=None)
 	parser.add_argument('-r', '--gtdb-release', help='Which GTDB release to use if -t argument issued [Default is R220].', default="R220")
 	parser.add_argument('-o', '--output-directory', help='Output directory.', required=True)
-	parser.add_argument('-d', '--dereplication-mode', help='Whether to use a "dynamic" (more concise) or "greedy" (more\ncomprehensive) approach to selecting representative genomes.\n[Default is "dynamic"]', required=False, default="dynamic")
+	parser.add_argument('-d', '--dereplication-mode', help='Whether to use a "dynamic" (more concise) or "greedy" (more\ncomprehensive) approach to selecting representative genomes.\n[Default is "greedy"]', required=False, default="greedy")
 	parser.add_argument('-i', '--percent-identity-cutoff', type=float, help="ANI cutoff for dereplication [Default is 99.0].", required=False, default=99.0)
 	parser.add_argument('-tc', '--test-cutoffs', action='store_true', help="Assess clustering using various pre-selected cutoffs.", required=False, default=False)
 	parser.add_argument('-f', '--aligned-fraction-cutoff', type=float, help="Aligned cutoff threshold for dereplication - only needed by\none genome [Default is 90.0].", required=False, default=90.0)

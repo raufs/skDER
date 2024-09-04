@@ -86,7 +86,17 @@ def create_parser():
 	of proteins overlapping, ANI) in the clustering reports will all be based on processed 
 	(MGE filtered) genomes. However, the final representative genomes in the 
 	Dereplicated_Representative_Genomes/ folder will be the original unprocesed genomes.
-	""", formatter_class=argparse.RawTextHelpFormatter)
+
+    If you use CiDDER for your research, please kindly cite both:
+
+    CD-HIT: accelerated for clustering the next-generation sequencing data. Bioinformatics.
+    Fu et al. 2012
+
+    and
+
+    skDER & CiDDER: microbial genome dereplication approaches for comparative genomic and 
+    metagenomic applications. Salamzade, Kottapalli, and Kalan, 2024.
+    """, formatter_class=argparse.RawTextHelpFormatter)
 
 	parser.add_argument('-g', '--genomes', nargs='+', help='Genome assembly file paths or paths to containing\ndirectories. Files should be in FASTA format and can be gzipped\n(accepted suffices are: *.fasta,\n*.fa, *.fas, or *.fna) [Optional].', required=False, default=[])
 	parser.add_argument('-t', '--taxa-name', help='Genus or species identifier from GTDB for which to\ndownload genomes for and include in\ndereplication analysis [Optional].', required=False, default=None)

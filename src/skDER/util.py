@@ -145,17 +145,29 @@ def n50_calc(genome_file):
 	#Solution adapted from dinovski:
 	#https://gist.github.com/dinovski/2bcdcc770d5388c6fcc8a656e5dbe53c
 	lengths = []
-	seq = ""
-	with open(genome_file) as fasta:
-		for line in fasta:
-			if line.startswith('>'):
-				if seq != "":
-					lengths.append(len(seq))
-				seq = ""
-			else:
-				seq += line.strip()
-	if seq != "":
-		lengths.append(len(seq))
+	seq = ""	
+	if genome_file.endswith('.gz'):
+		with gzip.open(genome_file, 'rt') as fasta:
+			for line in fasta:
+				if line.startswith('>'):
+					if seq != "":
+						lengths.append(len(seq))
+					seq = ""
+				else:
+					seq += line.strip()
+		if seq != "":
+			lengths.append(len(seq))
+	else:	
+		with open(genome_file) as fasta:
+			for line in fasta:
+				if line.startswith('>'):
+					if seq != "":
+						lengths.append(len(seq))
+					seq = ""
+				else:
+					seq += line.strip()
+		if seq != "":
+			lengths.append(len(seq))
 
 	## sort contigs longest>shortest
 	all_len=sorted(lengths, reverse=True)
