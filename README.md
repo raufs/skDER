@@ -115,14 +115,14 @@ Here is an overview of the algorithm:
 
 >- Download or process input genomes.
 >- Predict proteins using pyrodigal.
->- Comprehensive clustering of all proteins using CD-HIT (default options: )
+>- Comprehensive clustering of all proteins using CD-HIT 
 >- Select genome with the most number of distinct protein clusters as the initial representative.
 >- Iteratively add more representative genomes one at a time, selecting the next based on maximized addition of novel protein clusters to the current representative set.
 >- End addition of representative genomes if one of three criteria are met: (i) Next genome adds less than X number of distinct protein clusters (X is by default 0), (ii) over Y% of the total distinct protein clusters across all genomes are found in the so-far selected reprsentative genomes (Y is by default 90%), or (iii) over Z% of the total distinct multi-genome protein clusters across all genomes are found in the so-far selected representative genomes (Z is by default 100%). Thus, by default, only Y is used for representative genome selection. 
 
 ### Using the Dynamic Programming Dereplication Approach (skDER)
 
-Unlike dRep, which implements a greedy approach for selecting representative genomes, the default dereplication method in skDER approximates selection of a single representative for coarser clusters of geneomes using a dynamic programming approach in which a set of genomes deemed as redundant is kept track of, avoiding the need to actually cluster genomes. 
+The dynamic dereplication method in skDER approximates selection of a single representative for coarser clusters of geneomes using a dynamic programming approach in which a set of genomes deemed as redundant is kept track of, avoiding the need to actually cluster genomes. 
 
 Here is an overview of the algorithm:
 
@@ -203,11 +203,23 @@ usage: skder [-h] [-g GENOMES [GENOMES ...]] [-t TAXA_NAME] [-r GTDB_RELEASE] -o
 	before MGE filtering to not penalize genomes of high quality that simply have many 
 	MGEs and enable them to still be selected as representatives.
 	
+    If you use skDER for your research, please kindly cite both:
+
+    Fast and robust metagenomic sequence comparison through sparse chaining with skani.
+    Nature Methods. Shaw and Yu, 2023.
+
+    and
+    
+    skDER & CiDDER: microbial genome dereplication approaches for comparative genomic 
+    and metagenomic applications. Salamzade, Kottapalli, and Kalan, 2024
+
+    
 
 options:
   -h, --help            show this help message and exit
   -g GENOMES [GENOMES ...], --genomes GENOMES [GENOMES ...]
-                        Genome assembly files in (gzipped) FASTA format
+                        Genome assembly file paths or paths to containing
+                        directories. Files should be in FASTA format and can be gzipped
                         (accepted suffices are: *.fasta,
                         *.fa, *.fas, or *.fna) [Optional].
   -t TAXA_NAME, --taxa-name TAXA_NAME
@@ -221,7 +233,7 @@ options:
   -d DEREPLICATION_MODE, --dereplication-mode DEREPLICATION_MODE
                         Whether to use a "dynamic" (more concise) or "greedy" (more
                         comprehensive) approach to selecting representative genomes.
-                        [Default is "dynamic"]
+                        [Default is "greedy"]
   -i PERCENT_IDENTITY_CUTOFF, --percent-identity-cutoff PERCENT_IDENTITY_CUTOFF
                         ANI cutoff for dereplication [Default is 99.0].
   -tc, --test-cutoffs   Assess clustering using various pre-selected cutoffs.
@@ -235,7 +247,7 @@ options:
   -p SKANI_TRIANGLE_PARAMETERS, --skani-triangle-parameters SKANI_TRIANGLE_PARAMETERS
                         Options for skani triangle. Note ANI and AF cutoffs
                         are specified separately and the -E parameter is always
-                        requested. [Default is ""].
+                        requested. [Default is "-s 90.0"].
   -s, --sanity-check    Confirm each FASTA file provided or downloaded is actually
                         a FASTA file. Makes it slower, but generally
                         good practice.
@@ -297,12 +309,23 @@ usage: cidder [-h] [-g GENOMES [GENOMES ...]] [-t TAXA_NAME] [-r GTDB_RELEASE] -
 	of proteins overlapping, ANI) in the clustering reports will all be based on processed 
 	(MGE filtered) genomes. However, the final representative genomes in the 
 	Dereplicated_Representative_Genomes/ folder will be the original unprocesed genomes.
-	
+
+    If you use CiDDER for your research, please kindly cite both:
+
+    CD-HIT: accelerated for clustering the next-generation sequencing data. Bioinformatics.
+    Fu et al. 2012
+
+    and
+
+    skDER & CiDDER: microbial genome dereplication approaches for comparative genomic and 
+    metagenomic applications. Salamzade, Kottapalli, and Kalan, 2024.
+    
 
 options:
   -h, --help            show this help message and exit
   -g GENOMES [GENOMES ...], --genomes GENOMES [GENOMES ...]
-                        Genome assembly files in (gzipped) FASTA format
+                        Genome assembly file paths or paths to containing
+                        directories. Files should be in FASTA format and can be gzipped
                         (accepted suffices are: *.fasta,
                         *.fa, *.fas, or *.fna) [Optional].
   -t TAXA_NAME, --taxa-name TAXA_NAME
