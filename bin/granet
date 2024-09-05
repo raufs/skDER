@@ -40,14 +40,13 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 import os
 import sys
-from skDER import util
 from time import sleep
 import argparse
 import pkg_resources
 import traceback
 import igraph as ig
 import matplotlib.pyplot as plt
-
+import random
 
 version = pkg_resources.require("skDER")[0].version
 
@@ -61,6 +60,10 @@ def create_parser():
 	Affiliation: Kalan Lab, UW Madison, McMaster University
 								  
 	granet: graph network - plots a network with representative genomes marked in red.
+	
+	E.g. granet -s greedy_skder_results/Skani_Triangle_Edge_Output.txt \\
+	            -d greedy_skder_results/Dereplicated_Representative_Genomes/ \\
+	            -ns 10 -w 5 -ew 2 -o greedy_skder_granet.png
 	""", formatter_class=argparse.RawTextHelpFormatter)
 
 	parser.add_argument('-s', '--skani-results', help="Path to skani clustering results - for CiDDER this can be generated via requesting -ns.", required=True)
@@ -69,10 +72,11 @@ def create_parser():
 	parser.add_argument('-f', '--af-cutoff', type=float, help="The AF cutoff for edges to be shown in the network [Default is 90.0].", default=90.0, required=False)
 	parser.add_argument('-o', '--output-plot', help="Path to output plot in PNG format [Default is \"dereplication_network_view.png\"].", required=False, default="dereplication_network_view.png")
 	parser.add_argument('-w', '--width', type=int, help="Width of the plotting space [Default is 50].", default=50, required=False)
-	parser.add_argument('-wm', '--weak_mode', action='store_true', help="Apply weak connection mode - to space things out more if too much overlap - not compatible with layout.", required=False, default=False)
+	parser.add_argument('-wm', '--weak-mode', action='store_true', help="Apply weak connection mode - to space things out more if too much overlap - not compatible with layout.", required=False, default=False)
 	parser.add_argument('-l', '--layout', help="The layout mode to use - see: https://python.igraph.org/en/stable/tutorial.html#layout-algorithms [Default is \"fruchterman_reingold\"].", required=False, default="fruchterman_reingold")
-	parser.add_argument('-ns', '--node_size', type=float, help="The node size [Default is 3].", required=False, default=3)
-	parser.add_argument('-ew', '--edge_width', type=float, help="The edge width [Default is 0.5].", required=False, default=0.5)
+	parser.add_argument('-ns', '--node-size', type=float, help="The node size [Default is 3].", required=False, default=3)
+	parser.add_argument('-ew', '--edge-width', type=float, help="The edge width [Default is 0.5].", required=False, default=0.5)
+	parser.add_argument('-rs', '--random-seed', type=int, help="Random seed to control layout reproducability [Default is 1234].", required=False, default=1234)
 	parser.add_argument('-v', '--version', action='store_true', help="Report version of mgecut.", required=False, default=False)
 	args = parser.parse_args()
 	return args
@@ -95,6 +99,7 @@ def granet():
 	node_size_val = myargs.node_size
 	edge_width_val = myargs.edge_width
 	layout_setting = myargs.layout
+	random_seed = myargs.random_seed
 	
 	reps = set([])
 	for f in os.listdir(dereplicated_results_dir):
@@ -114,7 +119,7 @@ def granet():
 	genome_to_index = {}
 	max_i = 0 
 	genome_rep_list = []
-	for i, g in enumerate(all_genomes):
+	for i, g in enumerate(sorted(all_genomes)):
 		genome_to_index[g] = i
 		max_i = i
 		if g in reps:
@@ -141,6 +146,8 @@ def granet():
 	
 	g = ig.Graph(n_vertices, edges)
 
+	random.seed(random_seed)
+
 	g.vs["is_rep"] = genome_rep_list
 	fig, ax = plt.subplots(figsize=(width,width))	
 	if weak_mode_flag:
@@ -164,7 +171,7 @@ def granet():
             edge_width=edge_width_val,
             edge_color="#aba9a9")
 
-	plt.show()
+	#plt.show()
 
 	# Save the graph as an image file
 	fig.savefig(output_plot)

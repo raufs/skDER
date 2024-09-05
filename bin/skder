@@ -84,16 +84,15 @@ def create_parser():
 	before MGE filtering to not penalize genomes of high quality that simply have many 
 	MGEs and enable them to still be selected as representatives.
 	
-    If you use skDER for your research, please kindly cite both:
+	If you use skDER for your research, please kindly cite both:
 
-    Fast and robust metagenomic sequence comparison through sparse chaining with skani.
-    Nature Methods. Shaw and Yu, 2023.
+	Fast and robust metagenomic sequence comparison through sparse chaining with skani.
+	Nature Methods. Shaw and Yu, 2023.
 
-    and
+	and
     
-    skDER & CiDDER: microbial genome dereplication approaches for comparative genomic 
-    and metagenomic applications. Salamzade, Kottapalli, and Kalan, 2024
-
+	skDER & CiDDER: microbial genome dereplication approaches for comparative genomic 
+	and metagenomic applications. Salamzade, Kottapalli, and Kalan, 2024
     """, formatter_class=argparse.RawTextHelpFormatter)
 
 	parser.add_argument('-g', '--genomes', nargs='+', help='Genome assembly file paths or paths to containing\ndirectories. Files should be in FASTA format and can be gzipped\n(accepted suffices are: *.fasta,\n*.fa, *.fas, or *.fna) [Optional].', required=False, default=[])
@@ -209,13 +208,13 @@ def skder_main():
 		# if requested.
 		sys.stdout.write("GTDB listing file not available, using wget to download it.\n")
 		logObject.info("\nGTDB listing file not available, using wget to download it.")
-		wget_cmd = ['wget', 'https://github.com/raufs/gtdb_gca_to_taxa_mappings/raw/main/GTDB_' + gtdb_release + '_Information.txt.gz', '-P', outdir]
+		wget_cmd = ['wget', '-q', 'https://github.com/raufs/gtdb_gca_to_taxa_mappings/raw/main/GTDB_' + gtdb_release + '_Information.txt.gz', '-P', outdir]
 		gtdb_listing_file = outdir + "GTDB_" + gtdb_release + "_Information.txt.gz"
 		util.runCmd(wget_cmd, logObject, check_files=[gtdb_listing_file])
 
 		genbank_accession_listing_file = outdir + 'NCBI_Genbank_Accession_Listing.txt'
-		sys.stdout.write("--------------------\nStep 0\n--------------------\nBeginning by assessing which genomic assemblies are available for the taxa %s in GTDB %s\n" % (taxa_name, gtdb_release))
-		logObject.info("\n--------------------\nStep 0\n--------------------\nBeginning by assessing which genomic assemblies are available for the taxa %s in GTDB %s" % (taxa_name, gtdb_release))
+		sys.stdout.write("Beginning by assessing which genomic assemblies are available for the taxa %s in GTDB %s\n" % (taxa_name, gtdb_release))
+		logObject.info("Beginning by assessing which genomic assemblies are available for the taxa %s in GTDB %s" % (taxa_name, gtdb_release))
 
 		if not os.path.isfile(genbank_accession_listing_file):
 			genbank_accession_listing_handle = open(genbank_accession_listing_file, 'w')
