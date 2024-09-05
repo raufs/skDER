@@ -287,6 +287,23 @@ def skder_main():
 							gf_listing_handle.write(renamed_gfile + '\n')
 						gf_listing_handle.close()
 
+	if os.path.isfile(all_genomes_listing_file):
+		total_gtdb_genome_count = 0
+		with open(genbank_accession_listing_file) as ogalf:
+			for line in ogalf:
+				line = line.strip()
+				total_gtdb_genome_count += 1
+
+		genome_count = 0
+		with open(all_genomes_listing_file) as oaglf:
+			for line in oaglf:
+				line = line.strip()
+				genome_count += 1
+			
+		msg = 'Was able to download %s of %s genomes belonging to taxa "%s" in GTDB %s.' % (str(genome_count), str(total_gtdb_genome_count), taxa_name, gtdb_release)
+		sys.stderr.write(msg + '\n')
+		logObject.info(msg) 
+
 	if genomes:
 		gf_listing_handle = open(all_genomes_listing_file, 'a+')
 		for gf in genomes:

@@ -277,6 +277,22 @@ def cidder_main():
 							gf_listing_handle.write(renamed_gfile + '\n')
 						gf_listing_handle.close()
 
+	if os.path.isfile(all_genomes_listing_file):
+		total_gtdb_genome_count = 0
+		with open(genbank_accession_listing_file) as ogalf:
+			for line in ogalf:
+				line = line.strip()
+				total_gtdb_genome_count += 1
+
+		genome_count = 0
+		with open(all_genomes_listing_file) as oaglf:
+			for line in oaglf:
+				line = line.strip()
+				genome_count += 1
+			
+		msg = 'Was able to download %s of %s genomes belonging to taxa "%s" in GTDB %s.' % (str(genome_count), str(total_gtdb_genome_count), taxa_name, gtdb_release)
+		sys.stderr.write(msg + '\n')
+		logObject.info(msg) 
 
 	if genomes:
 		gf_listing_handle = open(all_genomes_listing_file, 'a+')
@@ -446,6 +462,9 @@ def cidder_main():
 	rep_genomes = set([])
 	rep_genomes_protein_clusters = set([])
 	rep_genomes_multigenome_protein_clusters = set([])
+	
+	rep_appending_order_file = outdir + 'CiDDER_Results.txt'
+	raof_handle = open(rep_appending_order_file, 'w')
 
 	# First, select (one of) the genome(s) with the most distinct protein clusters.
 	for i, gc in sorted(genome_cluster_counts.items(), key=itemgetter(1), reverse=True):
@@ -454,6 +473,7 @@ def cidder_main():
 			msg = 'Starting genome: %s - %d distinct protein clusters' % (gc[0], gc[1])
 			sys.stdout.write(msg + '\n')
 			logObject.info(msg)
+			raof_handle.write(gc[0] + '\t0\n')
 			genome_path = genome_name_to_path[gc[0]]
 			if genome_path in mge_proc_to_unproc_mapping:
 				genome_path = mge_proc_to_unproc_mapping[genome_path]
@@ -469,6 +489,7 @@ def cidder_main():
 	curr_saturation = (len(rep_genomes_protein_clusters)/c_count)*100.0
 	curr_multigenome_saturation = (len(rep_genomes_multigenome_protein_clusters)/mgc_count)*100.0
 
+	rep_index = 1
 	if curr_saturation >= saturation_cutoff or curr_multigenome_saturation >= multigenome_saturation_cutoff:
 		msg = 'Requirements met! Protein cluster saturation of representative genomes is: %0.2f%%\nMulti-genome protein cluster saturation of representative genomes is  %0.2f%%' % (curr_saturation, curr_multigenome_saturation)
 		sys.stdout.write(msg + '\n')
@@ -503,8 +524,13 @@ def cidder_main():
 				else:
 					shutil.copy2(genome_path, cidder_drep_dir)
 				rep_genomes.add(new_rep)
+				raof_handle.write(new_rep + '\t' + str(rep_index) + '\n')
+				rep_index += 1
 				rep_genomes_protein_clusters = rep_genomes_protein_clusters.union(genome_protein_clusters[new_rep])
 				rep_genomes_multigenome_protein_clusters = rep_genomes_multigenome_protein_clusters.union(genome_protein_clusters[new_rep].intersection(multi_genome_clusters))
+				msg = 'Adding genome %s' % new_rep
+				sys.stdout.write(msg + '\n')
+				logObject.info(msg)
 			
 			curr_saturation = (len(rep_genomes_protein_clusters)/c_count)*100.0
 			curr_multigenome_saturation = (len(rep_genomes_multigenome_protein_clusters)/mgc_count)*100.0
@@ -514,7 +540,8 @@ def cidder_main():
 				sys.stdout.write(msg + '\n')
 				logObject.info(msg)
 				limits_hit = True
-
+	raof_handle.close()
+	
 	msg = 'There were %d representative genomes selected from %d considered!' % (len(rep_genomes), number_of_genomes)
 	sys.stdout.write(msg + '\n')
 	logObject.info(msg)	
