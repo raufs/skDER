@@ -47,16 +47,20 @@ conda activate skder_env
 
 ### Docker 
 
-*Coming soon!*
-
-<!---
 Download the bash wrapper script to simplify usage for skDER or CiDDER:
 
 ```bash
+# download the skDER wrapper script and make it executable
+wget https://raw.githubusercontent.com/raufs/skDER/refs/heads/main/Docker/skDER/run_skder.sh
+chmod a+x run_skder.sh
 
+# or download the CiDDER wrapper script and make it executable
+wget https://raw.githubusercontent.com/raufs/skDER/refs/heads/main/Docker/CiDDER/run_cidder.sh
+chmod a+x run_cidder.sh
 
-# make executable
-chmod a+x run_skDER.sh
+# test it out!
+./run_skder.sh -h
+./run_cidder.sh -h
 ```
 
 Optionally, if you are interested in filtering MGEs using geNomad, download the relevant databases:
@@ -66,8 +70,6 @@ wget https://zenodo.org/records/8339387/files/genomad_db_v1.5.tar.gz?download=1
 mv genomad_db_v1.5* genomad_db_v1.5.tar.gz
 tar -zxvf genomad_db_v1.5.tar.gz
 ```
-
--->
 
 ### Conda Manual
 
