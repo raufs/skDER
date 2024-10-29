@@ -100,6 +100,9 @@ skDER features two distinct algorithms for dereplication (details can be found b
 
 - **dynamic approach:** approximates selection of a single representative genome per transitive cluster - results in a concise listing of representative genomes - well suited for metagenomic applications.
 - **greedy approach:** performs selection based on greedy set cover type approach - better suited to more comprehensively select representative genomes and sample more of a taxon's pangenome [current default].
+-
+> [!NOTE]
+> The skDER "greedy" algorithm is just referring to the selection algorithm - all vs all assessment is performed using skani triangle - this is in contrast to dRep or galah where "greedy" is referring to their selection of representative genomes followed by targeted ANI asseessment of the genome against the full set of genomes. While this likely speeds things up considerably when using fastANI, with skani this does not make much of a difference (slightly more memory efficient if dealing with 1000s of genomes, but also results in slower speeds than just using skani triangle).
 
 #### CiDDER
 
