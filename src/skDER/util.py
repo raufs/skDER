@@ -59,7 +59,13 @@ def setupDirectories(directories):
 		assert (type(directories) is list)
 		for d in directories:
 			if os.path.isdir(d):
-				os.system('rm -rf %s' % d)
+				response = input("The directory %s already exists, will delete and recreate, is this ok? (yes/no): " % d)
+				if response.lower() == 'yes':
+					os.system('rm -fr %s' % d)
+				else:
+					msg = 'Deletion not requested! Exiting ...'
+					sys.stderr.write(msg + '\n')
+					sys.exit(1)
 			os.system('mkdir %s' % d)
 	except Exception as e:
 		sys.stderr.write(traceback.format_exc())

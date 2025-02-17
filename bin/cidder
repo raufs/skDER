@@ -116,7 +116,7 @@ def create_parser():
 	parser.add_argument('-l', '--symlink', action='store_true', help="Symlink representative genomes in results subdirectory\ninstead of performing a copy of the files.", required=False, default=False)
 	parser.add_argument('-u', '--ncbi-nlm-url', action='store_true', help="Try using the NCBI ftp address with '.nlm' for\nncbi-genome-download if there are issues.", required=False, default=False)
 	parser.add_argument('-c', '--threads', type=int, help="Number of threads/processes to use [Default is 1].", required=False, default=1)
-	parser.add_argument('-m', '--memory', type=float, help="The memory limit for CD-HIT in Gigabytes [Default is 0 = unlimited].", required=False, default=0)
+	parser.add_argument('-m', '--memory', type=float, help="The memory limit for CD-HIT in Gigabytes [Default is 0 = unlimited].", required=False, default=0.0)
 	parser.add_argument('-v', '--version', action='store_true', help="Report version of CiDDER.", required=False, default=False)
 	args = parser.parse_args()
 	return args
@@ -135,7 +135,7 @@ def cidder_main():
 		taxa_name = myargs.taxa_name.strip('"')
 	gtdb_release = myargs.gtdb_release.upper()
 	outdir = os.path.abspath(myargs.output_directory) + '/'
-	cd_hit_params = myargs.cd_hit_params
+	cd_hit_params = myargs.cd_hit_params.strip('"')
 	metagenome_mode = myargs.metagenome_mode
 	include_edge_orfs = myargs.include_edge_orfs
 	new_proteins_needed = myargs.new_proteins_needed
@@ -419,6 +419,7 @@ def cidder_main():
 	cdhit_mem = 1000.0*memory
 	if cdhit_mem > 0 and cdhit_mem < 1:
 		cdhit_mem = 1
+	cdhit_mem = int(cdhit_mem)
 	cdhit_cmd = ['cd-hit', '-d', '0', '-T', str(threads), '-M', str(cdhit_mem), cd_hit_params, '-i', combined_proteome_faa, '-o', cdhit_result_prefix]
 	try:
 		util.runCmd(cdhit_cmd, logObject, check_files=[cdhit_cluster_file])

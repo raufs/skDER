@@ -133,7 +133,7 @@ def skder_main():
 	selection_mode = myargs.dereplication_mode.lower()
 	percent_identity_cutoff = myargs.percent_identity_cutoff
 	aligned_fraction_cutoff = myargs.aligned_fraction_cutoff
-	skani_triangle_parameters = myargs.skani_triangle_parameters
+	skani_triangle_parameters = myargs.skani_triangle_parameters.strip('"')
 	max_af_distance_cutoff = myargs.max_af_distance_cutoff
 	test_cutoffs_flag = myargs.test_cutoffs
 	threads = myargs.threads
