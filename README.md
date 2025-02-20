@@ -41,11 +41,11 @@ conda activate skder_env
 To also use the option to prune out positions corresponding to MGEs using either PhiSpy or geNomad
 
 ```bash
-conda create -n skder_env -c conda-forge -c bioconda skder genomad phispy
+conda create -n skder_env -c conda-forge -c bioconda skder genomad=1.8.0 phispy "keras>=2.7,<3.0" "tensorflow>=2.7,<2.16"
 conda activate skder_env
 ```
 
-*Note, geNomad is actively under development and new databases and versions are being released intermittendly. Thus, for the best installation practice possible please consult its [git repo](https://github.com/apcamargo/genomad.git). If there are issues with installation, please first try to install geNomad by itself in an individual conda repo. If successful, which suggests the issue is due to conflicts that have risen between geNomad and skDER/CiDDER dependencies, then please just let us know via a GitHub issue and we will attempt to resolve the issue.* 
+*Note, geNomad is actively under development and new databases and versions are being released intermittendly. In the above code, we are suggesting installing v1.8.0 because it has been tested to work with database version 1.5, which we suggest downloading below. These are the versions we used for the skDER/CiDDER manuscript. For the most up to date installation of geNomad and its database possible, please consult its [git repo](https://github.com/apcamargo/genomad.git). If there are issues with installation, please first try to install geNomad by itself in an individual conda repo. If successful, which suggests the issue is due to conflicts that have risen between geNomad and skDER/CiDDER dependencies, then please just let us know via a GitHub issue and we will attempt to resolve the issue.* 
 
 ### Docker 
 
