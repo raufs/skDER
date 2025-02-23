@@ -37,7 +37,7 @@ conda activate skder_env
 ```
 
 > [!NOTE]
-> 🍎 For Mac users with Apple Silicon chips, you might need to specify `CONDA_SUBDIR=osx-64` prior to `conda create` as described [here](https://github.com/bioconda/bioconda-recipes/issues/41702#issuecomment-1614173361). So you would issue: `CONDA_SUBDIR=osx-64 conda create -n zol_env -c conda-forge -c bioconda skder`.
+> 🍎 For Mac users with Apple Silicon chips, you might need to specify `CONDA_SUBDIR=osx-64` prior to `conda create` as described [here](https://github.com/bioconda/bioconda-recipes/issues/41702#issuecomment-1614173361). So you would issue: `CONDA_SUBDIR=osx-64 conda create -n skder_env -c conda-forge -c bioconda skder`.
 
 #### installation with mgecut (for removing MGEs prior to dereplication assessment)
 
