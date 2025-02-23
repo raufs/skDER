@@ -36,6 +36,9 @@ conda create -n skder_env -c conda-forge -c bioconda skder
 conda activate skder_env
 ```
 
+> [!NOTE]
+> 🍎 For Mac users with Apple Silicon chips, you might need to specify `CONDA_SUBDIR=osx-64` prior to `conda create` as described [here](https://github.com/bioconda/bioconda-recipes/issues/41702#issuecomment-1614173361). So you would issue: `CONDA_SUBDIR=osx-64 conda create -n zol_env -c conda-forge -c bioconda skder`.
+
 #### installation with mgecut (for removing MGEs prior to dereplication assessment)
 
 To also use the option to prune out positions corresponding to MGEs using either PhiSpy or geNomad
@@ -45,7 +48,8 @@ conda create -n skder_env -c conda-forge -c bioconda skder genomad=1.8.0 phispy 
 conda activate skder_env
 ```
 
-*Note, geNomad is actively under development and new databases and versions are being released intermittendly. In the above code, we are suggesting installing v1.8.0 because it has been tested to work with database version 1.5, which we suggest downloading below. These are the versions we used for the skDER/CiDDER manuscript. For the most up to date installation of geNomad and its database possible, please consult its [git repo](https://github.com/apcamargo/genomad.git). If there are issues with installation, please first try to install geNomad by itself in an individual conda repo. If successful, which suggests the issue is due to conflicts that have risen between geNomad and skDER/CiDDER dependencies, then please just let us know via a GitHub issue and we will attempt to resolve the issue.* 
+> [!TIP]
+> geNomad is actively under development and new databases and versions are being released intermittendly. In the above code, we are suggesting installing v1.8.0 because it has been tested to work with database version 1.5, which we suggest downloading below. These are the versions we used for the skDER/CiDDER manuscript. For the most up to date installation of geNomad and its database possible, please consult its [git repo](https://github.com/apcamargo/genomad.git). If there are issues with installation, please first try to install geNomad by itself in an individual conda repo. If successful, which suggests the issue is due to conflicts that have risen between geNomad and skDER/CiDDER dependencies, then please just let us know via a GitHub issue and we will attempt to resolve the issue.* 
 
 ### Docker 
 
