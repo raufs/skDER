@@ -162,10 +162,10 @@ def cidder_main():
 		sys.exit(1)
 
 	if os.path.isdir(outdir):
-		sys.stderr.write("Output directory already exists! Overwriting in 5 seconds...\n")
-		sleep(5)
+		sys.stderr.write("Output directory already exists!\n")
+		#sleep(5)
 
-	util.setupDirectories([outdir])
+	util.setupDirectories([outdir], automate_flag=True)
 
 	# Create logging object
 	log_file = outdir + 'Progress.log'
@@ -213,16 +213,17 @@ def cidder_main():
 	number_of_genomes = 0
 	genome_name_to_path = {}
 	try:
-		assert(os.path.isfile(all_genomes_listing_file))
-		with open(all_genomes_listing_file) as oaglf:
-			for line in oaglf:
-				genome_path = line.strip()
-				genome_name = '.'.join(line.split('/')[-1].split('.')[:-1])
-				if genome_path.endswith('.gz'):	
-					genome_name = '.'.join(line.split('/')[-1].split('.')[:-2])
-				genome_name_to_path[genome_name] = genome_path
-				number_of_genomes += 1
-		assert(number_of_genomes >= 2)
+		if os.path.isfile(all_genomes_listing_file):
+			with open(all_genomes_listing_file) as oaglf:
+				for line in oaglf:
+					genome_path = line.strip()
+					genome_name = '.'.join(line.split('/')[-1].split('.')[:-1])
+					if genome_path.endswith('.gz'):	
+						genome_name = '.'.join(line.split('/')[-1].split('.')[:-2])
+					genome_name_to_path[genome_name] = genome_path
+					number_of_genomes += 1
+		if len(proteomes) == 0:
+			assert(number_of_genomes >= 2)
 	except Exception as e:
 		msg = 'Error: fewer than 2 genomes downloaded / provided. Exiting ...'
 		logObject.error(msg)
@@ -236,9 +237,8 @@ def cidder_main():
 		logObject.info(msg)
 		
 	# filter genomes for MGEs if requested
-	all_genomes_listing_file = outdir + 'All_Genomes_Listing.txt'
 	mge_proc_to_unproc_mapping = None
-	if filter_mge_flag:
+	if number_of_genomes > 0 and filter_mge_flag:
 		proc_genomes_listing_file = outdir + 'All_Genomes_Listing_mgecut_Processed.txt'
 		try:
 			mge_proc_to_unproc_mapping, _ = util.filterMGEs(all_genomes_listing_file, outdir, proc_genomes_listing_file, logObject, threads=threads, genomad_database=genomad_database)
@@ -252,15 +252,16 @@ def cidder_main():
 		all_genomes_listing_file = proc_genomes_listing_file
 
 	combined_proteome_faa = outdir + 'All_Proteins.faa'
-	try:
-		cidder.runPyrodigal(all_genomes_listing_file, outdir, combined_proteome_faa, logObject, metagenome_mode=metagenome_mode, include_edge_orfs=include_edge_orfs, threads=threads)
-	except Exception as e:
-		msg = 'Error: running gene predictions. Exiting ...'
-		sys.stderr.write(msg + '\n')
-		logObject.error(msg)
-		sys.stderr.write(traceback.format_exc() + '\n')
-		logObject.error(traceback.format_exc())
-		sys.exit(1)
+	if number_of_genomes > 0:
+		try:
+			cidder.runPyrodigal(all_genomes_listing_file, outdir, combined_proteome_faa, logObject, metagenome_mode=metagenome_mode, include_edge_orfs=include_edge_orfs, threads=threads)
+		except Exception as e:
+			msg = 'Error: running gene predictions. Exiting ...'
+			sys.stderr.write(msg + '\n')
+			logObject.error(msg)
+			sys.stderr.write(traceback.format_exc() + '\n')
+			logObject.error(traceback.format_exc())
+			sys.exit(1)
 
 	proteome_name_to_path = {}
 	if len(proteomes) > 0:
@@ -273,7 +274,16 @@ def cidder_main():
 			sys.stderr.write(traceback.format_exc() + '\n')
 			logObject.error(traceback.format_exc())
 			sys.exit(1)
-	
+
+	number_of_genomes += number_of_genomes + len(proteome_name_to_path)
+	if number_of_genomes < 2:
+		msg = 'Error: fewer than 2 genomes downloaded / provided. Exiting ...'
+		logObject.error(msg)
+		sys.stderr.write(msg + '\n')
+		sys.stderr.write(traceback.format_exc() + '\n')
+		logObject.error(traceback.format_exc())
+		sys.exit(1)
+
 	cdhit_result_prefix = outdir + 'CD-HIT_clustering.faa'
 	try:
 		genome_protein_clusters, genome_cluster_counts, c_count, mgc_count, multi_genome_clusters = cidder.runAndProcessCDHIT(combined_proteome_faa, cdhit_result_prefix, cd_hit_params, max_memory, threads, logObject)

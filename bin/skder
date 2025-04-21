@@ -162,9 +162,9 @@ def skder_main():
 		sys.exit(1)
 	
 	if os.path.isdir(outdir):
-		sys.stderr.write("Output directory already exists! Overwriting in 5 seconds...\n")
-		sleep(5)
-	util.setupDirectories([outdir])
+		sys.stderr.write("Output directory already exists!\n")# Overwriting in 5 seconds...\n")
+		#sleep(5)
+	util.setupDirectories([outdir], automate_flag=automate_flag)
 		
 	# Create logging object
 	log_file = outdir + 'Progress.log'
@@ -262,7 +262,6 @@ def skder_main():
 		sys.exit(1)
 		
 	# filter genomes for MGEs if requested
-	all_genomes_listing_file = outdir + 'All_Genomes_Listing.txt'
 	mge_proc_to_unproc_mapping = None
 	mge_unproc_to_proc_mapping = None
 	if filter_mge_flag:
