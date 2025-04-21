@@ -12,10 +12,13 @@ dependencies:
   - skani
   - python-igraph
   - matplotlib
-  - ncbi-genome-download
   - seaborn
   - pandas
   - pyrodigal
-  - bioconda::cd-hit
-  - genomad
-  - phispy
+  - cd-hit
+  - genomad=1.8.0 
+  - phispy 
+  - keras>=2.7,<3.0 
+  - tensorflow>=2.7,<2.16
+  - aiofile
+  - aiohttp

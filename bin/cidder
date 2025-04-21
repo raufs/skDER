@@ -40,23 +40,15 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 import os
 import sys
-from skDER import util
-import shutil
+from skDER import util, cidder
 from time import sleep
 import argparse
-import gzip
-from collections import defaultdict
 import pkg_resources
-import multiprocessing
 import traceback
-from Bio import SeqIO
-from operator import itemgetter
-import math
 
 version = pkg_resources.require("skDER")[0].version
 
-ACCEPTED_SUFFICES = set(['fasta', 'fas', 'fna', 'fa'])
-VALID_GTDB_RELEASES = set(['R214', 'R220'])
+VALID_GTDB_RELEASES = set(['R220', 'R226'])
 
 def create_parser():
 	""" Parse arguments """
@@ -90,33 +82,36 @@ def create_parser():
 	If you use CiDDER for your research, please kindly cite both:
 
 	CD-HIT: accelerated for clustering the next-generation sequencing data. Bioinformatics.
-	Fu et al. 2012
+	Fu et al. 2012.
 
 	and
 
 	skDER & CiDDER: microbial genome dereplication approaches for comparative genomic and 
-	metagenomic applications. Salamzade, Kottapalli, and Kalan, 2024.
+	metagenomic applications. Salamzade, Kottapalli, and Kalan, 2025.
     """, formatter_class=argparse.RawTextHelpFormatter)
 
 	parser.add_argument('-g', '--genomes', nargs='+', help='Genome assembly file paths or paths to containing\ndirectories. Files should be in FASTA format and can be gzipped\n(accepted suffices are: *.fasta,\n*.fa, *.fas, or *.fna) [Optional].', required=False, default=[])
+	parser.add_argument('-p', '--proteomes', nargs='+', help='Proteome file paths or paths to containing\ndirectories. Files should be in FASTA format and can be gzipped\n(accepted suffices are: *.fasta,\n*.fa, or *.faa) [Optional].', required=False, default=[])
 	parser.add_argument('-t', '--taxa-name', help='Genus or species identifier from GTDB for which to\ndownload genomes for and include in\ndereplication analysis [Optional].', required=False, default=None)
-	parser.add_argument('-r', '--gtdb-release', help='Which GTDB release to use if -t argument issued [Default is R220].', default="R220")
-	parser.add_argument('-o', '--output-directory', help='Output directory.', required=True)
-	parser.add_argument('-p', '--cd-hit-params', help="CD-HIT parameters to use for clustering proteins - select carefully\n(don't set threads or memory - those are done by default in cidder) and\nsurround by quotes [Default is: \"-n 5 -c 0.95 -aL 0.75 -aS 0.90\"]", required=False, default="-n 5 -c 0.95 -aL 0.75 -aS 0.90")
-	parser.add_argument('-mg', '--metagenome-mode', action='store_true', help="Run pyrodigal using metagenome mode.",  required=False, default=False)
-	parser.add_argument('-e', '--include-edge-orfs', action='store_true', help="Include proteins from ORFs that hang off the edge of a contig/scaffold.", required=False, default=False)
 	parser.add_argument('-a', '--new-proteins-needed', type=int, help="The number of new protein clusters needed to add [Default is 0].", required=False, default=0)
 	parser.add_argument('-ts', '--total-saturation', type=float, help="The percentage of total proteins clusters needed to stop representative\ngenome selection [Default is 90.0].", required=False, default=90.0)
 	parser.add_argument('-mgs', '--multi-genome-saturation', type=float, help="The percentage of total multi-genome protein clusters needed to stop\nrepresentative genome selection [Default is 100.0].", required=False, default=100.0)
+	parser.add_argument('-rs', '--require-similarity', type=float, help="Require non-representative genomes to have X%% of their protein\nclusters represented by an individual representative genome [Default is 0.0].", required=False, default=0.0)
+	parser.add_argument('-o', '--output-directory', help='Output directory.', required=True)
+
+	parser.add_argument('-r', '--gtdb-release', help='Which GTDB release to use if -t argument issued [Default is R226].', default="R226")
+	parser.add_argument('-cdp', '--cd-hit-params', help="CD-HIT parameters to use for clustering proteins - select carefully\n(don't set threads or memory - those are done by default in cidder) and\nsurround by quotes [Default is: \"-n 5 -c 0.95 -aL 0.75 -aS 0.90\"]", required=False, default="-n 5 -c 0.95 -aL 0.75 -aS 0.90")
+	parser.add_argument('-mg', '--metagenome-mode', action='store_true', help="Run pyrodigal using metagenome mode.",  required=False, default=False)
+	parser.add_argument('-e', '--include-edge-orfs', action='store_true', help="Include proteins from ORFs that hang off the edge of a contig/scaffold.", required=False, default=False)
 	parser.add_argument('-s', '--sanity-check', action='store_true', help="Confirm each FASTA file provided or downloaded is actually\na FASTA file. Makes it slower, but generally\ngood practice.", required=False, default=False)
 	parser.add_argument('-fm', '--filter-mge', action='store_true', help="Filter predicted MGE coordinates along genomes before\ndereplication assessment but after N50\ncomputation.", required=False, default=False)
 	parser.add_argument('-gd', '--genomad-database', help="If filter-mge is specified, it will by default use PhiSpy;\nhowever, if a database directory for\ngeNomad is provided - it will use that instead\nto predict MGEs.", default=None, required=False)
 	parser.add_argument('-n', '--determine-clusters', action='store_true', help="Perform secondary clustering to assign non-representative\ngenomes to their closest representative genomes based on shared\nprotein clusters.", required=False, default=False)
 	parser.add_argument('-ns', '--determine-clusters-skani', action='store_true', help="Perform secondary clustering to assign non-representative\ngenomes to their closest representative genomes based on skani-computed\nANI.", required=False, default=False)
 	parser.add_argument('-l', '--symlink', action='store_true', help="Symlink representative genomes in results subdirectory\ninstead of performing a copy of the files.", required=False, default=False)
-	parser.add_argument('-u', '--ncbi-nlm-url', action='store_true', help="Try using the NCBI ftp address with '.nlm' for\nncbi-genome-download if there are issues.", required=False, default=False)
+
 	parser.add_argument('-c', '--threads', type=int, help="Number of threads/processes to use [Default is 1].", required=False, default=1)
-	parser.add_argument('-m', '--memory', type=float, help="The memory limit for CD-HIT in Gigabytes [Default is 0 = unlimited].", required=False, default=0.0)
+	parser.add_argument('-mm', '--max-memory', type=int, help="Max memory in Gigabytes [Default is 0 = unlimited].", required=False, default=0)
 	parser.add_argument('-v', '--version', action='store_true', help="Report version of CiDDER.", required=False, default=False)
 	args = parser.parse_args()
 	return args
@@ -130,6 +125,7 @@ def cidder_main():
 	myargs = create_parser()
 
 	genomes = myargs.genomes
+	proteomes = myargs.proteomes
 	taxa_name = None
 	if myargs.taxa_name:
 		taxa_name = myargs.taxa_name.strip('"')
@@ -141,15 +137,15 @@ def cidder_main():
 	new_proteins_needed = myargs.new_proteins_needed
 	saturation_cutoff = myargs.total_saturation
 	multigenome_saturation_cutoff = myargs.multi_genome_saturation
-	sanity_check = myargs.sanity_check
-	symlink = myargs.symlink
+	sanity_check_flag = myargs.sanity_check
+	symlink_flag = myargs.symlink
 	threads = myargs.threads
-	memory = myargs.memory
-	ncbi_nlm_url_flag = myargs.ncbi_nlm_url
 	determine_clusters_flag = myargs.determine_clusters
 	determine_clusters_ani_flag = myargs.determine_clusters_skani
 	filter_mge_flag = myargs.filter_mge
 	genomad_database = myargs.genomad_database
+	require_similarity = myargs.require_similarity
+	max_memory = myargs.max_memory
 
 	if genomad_database != None:
 		sys.stdout.write('Attempting to use geNomad to predict and cut out MGEs from genome assembly!\n')
@@ -158,10 +154,6 @@ def cidder_main():
 		except:
 			sys.stderr.write('geNomad requested as method but no or invalid path to the geNomad database provided via --genomad-db.\n')
 			sys.exit(1)
-
-	ngd_url = "https://ftp.ncbi.nih.gov/genomes"
-	if ncbi_nlm_url_flag:
-		ngd_url = "https://ftp.ncbi.nlm.nih.gov/genomes"
 
 	try:
 		assert(gtdb_release in VALID_GTDB_RELEASES)
@@ -189,360 +181,144 @@ def cidder_main():
 	parameters_handle = open(parameters_file, 'a+')
 	parameters_handle.write(' '.join(sys.argv) + '\n')
 	parameters_handle.close()
+	
+	# set max memory limit
+	if max_memory != 0:
+		logObject.info("Setting maximum memory usage to: %dGB" % max_memory)
+		sys.stdout.write("Setting maximum memory usage to: %dGB\n" % max_memory)
+		try:
+			util.memory_limit(max_memory)
+		except Exception as e:
+			logObject.info("Error setting memory limit")
+			sys.stdout.write("Error setting memory limit\n")
 
 	all_genomes_listing_file = outdir + 'All_Genomes_Listing.txt'
-
-	if taxa_name != "None" and taxa_name != None:
-		# Step 0: Download GTDB listing file from lsaBGC git repo, parse GTDB information 
-		# file, get list of Genbank accessions, and perform dry-run with ncbi-genome-download 
-		# if requested.
-		sys.stdout.write("GTDB listing file not available, using wget to download it.\n")
-		logObject.info("\nGTDB listing file not available, using wget to download it.")
-		wget_cmd = ['wget', '-q', 'https://github.com/raufs/gtdb_gca_to_taxa_mappings/raw/main/GTDB_' + gtdb_release + '_Information.txt.gz', '-P', outdir]
-		gtdb_listing_file = outdir + "GTDB_" + gtdb_release + "_Information.txt.gz"
-		util.runCmd(wget_cmd, logObject, check_files=[gtdb_listing_file])
-
-		genbank_accession_listing_file = outdir + 'NCBI_Genbank_Accession_Listing.txt'
-		sys.stdout.write("Beginning by assessing which genomic assemblies are available for the taxa %s in GTDB %s\n" % (taxa_name, gtdb_release))
-		logObject.info("Beginning by assessing which genomic assemblies are available for the taxa %s in GTDB %s" % (taxa_name, gtdb_release))
-
-		if not os.path.isfile(genbank_accession_listing_file):
-			genbank_accession_listing_handle = open(genbank_accession_listing_file, 'w')
-			with gzip.open(gtdb_listing_file, 'rt') as ogtdb:
-				for line in ogtdb:
-					line = line.strip('\n')
-					ls = line.split('\t')
-					if ls[0] == 'none': continue
-					if len(taxa_name.split()) == 1:
-						if ls[1] == taxa_name:
-							genbank_accession_listing_handle.write(ls[0] + '\n')
-					elif len(taxa_name.split()) == 2:
-						if ls[2] == taxa_name:
-							genbank_accession_listing_handle.write(ls[0] + '\n')
-			genbank_accession_listing_handle.close()
-
-		ogalf = open(genbank_accession_listing_file)
-		accession_count = len(ogalf.readlines())
-		ogalf.close()
-
-		if accession_count == 0:
-			sys.stderr.write('Warning: no genomes found to belong the genus or species specified in GTDB.\n')
-			logObject.info('Warning: no genomes found to belong the genus or species specified in GTDB.')
-		else:
-			genome_listing_file = outdir + 'NCBI_Genomes_from_Genbank_for_Taxa.txt'
-			if not os.path.isfile(genome_listing_file):
-				if accession_count != 0:
-					ngd_dry_cmd = ['ncbi-genome-download', '--dry-run', '--section', 'genbank', '-u', ngd_url, '-A', genbank_accession_listing_file, 'bacteria', '>', genome_listing_file]
-					util.runCmd(ngd_dry_cmd, logObject, check_files=[genome_listing_file])
-				else:
-					of = open(genome_listing_file, 'w')
-					of.close()
-
-			oglf = open(genome_listing_file)
-			genome_count = len(oglf.readlines())
-			oglf.close()
-			if genome_count == 0:
-				sys.stderr.write('Warning: no genomes could be downloaded with ncbi-genome-download.\n')
-				logObject.info('Warning: no genomes could be downloaded with ncbi-genome-download.')
-			else:
-				# Download all genomes in FASTA format & prodigal gene calling
-				genomes_directory = outdir + 'gtdb_ncbi_genomes/'
-				if not os.path.isfile(all_genomes_listing_file):
-					if genome_count != 0:
-						ngd_real_cmd = ['ncbi-genome-download', '--formats', 'fasta', '--retries', '2', '--section', 'genbank', '-u', ngd_url,
-							        '-A', genbank_accession_listing_file, '-o', genomes_directory, '--flat-output',  'bacteria']
-						util.runCmd(ngd_real_cmd, logObject, check_directories=[genomes_directory])
-
-						gca_to_species_name = {}
-						with gzip.open(gtdb_listing_file, 'rt') as ogtdb:
-								for line in ogtdb:
-									line = line.strip('\n')
-									ls = line.split('\t')
-									if ls[0] == 'none': continue
-									gca = ls[0]
-									sp_name = '_'.join(ls[2].split())
-									gca_to_species_name[gca] = sp_name
-									
-						gf_listing_handle = open(all_genomes_listing_file, 'a+')
-						for gf in os.listdir(genomes_directory):
-							gfile = genomes_directory + gf 
-							suffix = '.gz'.join(gf.split('.gz')[:-1]).split('.')[-1].lower()
-							if not suffix in ACCEPTED_SUFFICES: continue
-							if sanity_check:
-								assert (util.is_fasta(gfile))
-							gca = '_'.join(gf.split('_')[:2])
-							species_name = gca_to_species_name[gca]
-							renamed_gfile = genomes_directory + species_name + '_' + gca + '.fasta.gz'
-							os.rename(gfile, renamed_gfile)
-							gf_listing_handle.write(renamed_gfile + '\n')
-						gf_listing_handle.close()
-
 	if os.path.isfile(all_genomes_listing_file):
-		total_gtdb_genome_count = 0
-		with open(genbank_accession_listing_file) as ogalf:
-			for line in ogalf:
-				line = line.strip()
-				total_gtdb_genome_count += 1
+		try:
+			os.remove(all_genomes_listing_file)
+		except OSError as e:
+			msg = 'Error: issues removing the file %s.' % all_genomes_listing_file
+			sys.stderr.write(msg + '\n')
+			logObject.warning(msg)	
+			sys.stderr.write(traceback.format_exc() + '\n')
+			logObject.error(traceback.format_exc())
+			sys.exit(1)
 
-		genome_count = 0
-		with open(all_genomes_listing_file) as oaglf:
-			for line in oaglf:
-				line = line.strip()
-				genome_count += 1
-			
-		msg = 'Was able to download %s of %s genomes belonging to taxa "%s" in GTDB %s.' % (str(genome_count), str(total_gtdb_genome_count), taxa_name, gtdb_release)
-		sys.stderr.write(msg + '\n')
-		logObject.info(msg) 
+	# process input	
+	if taxa_name != "None" and taxa_name != None:
+		util.downloadGTDBGenomes(taxa_name, gtdb_release, outdir, all_genomes_listing_file, logObject, sanity_check=sanity_check_flag, automated_download=automate_flag)
+	if len(genomes) > 0:
+		util.processInputGenomes(genomes, all_genomes_listing_file, logObject, sanity_check=sanity_check_flag)
 
-	if genomes:
-		gf_listing_handle = open(all_genomes_listing_file, 'a+')
-		for gf in genomes:
-			if os.path.isfile(gf):
-				gf = os.path.abspath(gf)
-				suffix = gf.split('.')[-1].lower()
-				if gf.endswith('.gz'):
-					suffix = '.gz'.join(gf.split('.gz')[:-1]).split('.')[-1].lower()
-				if not suffix in ACCEPTED_SUFFICES: continue
-				if sanity_check:
-					assert(util.is_fasta(gf))
-				gf_listing_handle.write(gf + '\n')
-			else:
-				gf_dir = os.path.abspath(gf) + '/'
-				for gdf in os.listdir(gf_dir):
-					gdf = os.path.abspath(gf_dir + gdf)
-					suffix = gdf.split('.')[-1].lower()
-					if gdf.endswith('.gz'):
-						suffix = '.gz'.join(gdf.split('.gz')[:-1]).split('.')[-1].lower()
-					if not suffix in ACCEPTED_SUFFICES: continue
-					if sanity_check:
-						assert(util.is_fasta(gdf))
-					gf_listing_handle.write(gdf + '\n')
-		gf_listing_handle.close()
-
-	mge_proc_to_unproc_mapping = {}
-	if filter_mge_flag:
-		mgecut_processed_dir = outdir + 'mgecut_processed_genomes/'
-		mgecut_tmp_dir = outdir + 'mgecut_tmp/'
-		util.setupDirectories([mgecut_processed_dir, mgecut_tmp_dir])
-
-		parallel_jobs_4thread = max(math.floor(threads / 4), 1)
-		multi_thread = 4
-		if threads < 4:
-			multi_thread = threads
-			parallel_jobs_4thread = 1
-
-		mgecut_cmds = []
-		with open(all_genomes_listing_file) as oaglf:
-			for line in oaglf:
-				genome = line.strip()
-				proc_genome = mgecut_processed_dir + genome.split('/')[-1]
-				mge_proc_to_unproc_mapping[proc_genome] = genome
-				tmp_dir = mgecut_tmp_dir + genome.split('/')[-1]
-				mgecut_cmd = ['mgecut', '-i', genome, '-o', proc_genome, '-d', tmp_dir, 
-				              '-c', str(multi_thread)]
-				if genomad_database != None:
-					mgecut_cmd += ['-m', 'genomad', '-gd', genomad_database]
-				mgecut_cmds.append(mgecut_cmd)
-		p = multiprocessing.Pool(parallel_jobs_4thread)
-		p.map(util.multiProcess, mgecut_cmds)
-		p.close()
-
-		genome_listing_mgecut_file = outdir + 'mgecut_Processed_Genomes_Listing.txt'
-		glmf_handle = open(genome_listing_mgecut_file, 'w')
-		for f in os.listdir(mgecut_processed_dir):
-			mgecut_genome_file = mgecut_processed_dir + f
-			glmf_handle.write(mgecut_genome_file + '\n')
-		glmf_handle.close()
-		all_genomes_listing_file = genome_listing_mgecut_file
-	
-	pyrodigal_resdir = outdir + 'pyrodigal_results/'
-	util.setupDirectories([pyrodigal_resdir])
-
-	# Run pyrodigal for gene calling
-	number_of_genomes = None
-	pyrodigal_cmds = []
+	number_of_genomes = 0
 	genome_name_to_path = {}
 	try:
 		assert(os.path.isfile(all_genomes_listing_file))
-		number_of_genomes = 0
-		genome_names = set([])
 		with open(all_genomes_listing_file) as oaglf:
 			for line in oaglf:
 				genome_path = line.strip()
 				genome_name = '.'.join(line.split('/')[-1].split('.')[:-1])
+				if genome_path.endswith('.gz'):	
+					genome_name = '.'.join(line.split('/')[-1].split('.')[:-2])
 				genome_name_to_path[genome_name] = genome_path
-				genome_names.add(genome_name) 
-				result_path = pyrodigal_resdir + genome_name + '.faa'
-				pyrodigal_cmd = ['pyrodigal', '-i', genome_path, '-a', result_path]
-				if metagenome_mode:
-					pyrodigal_cmd += ['-m']
-				if not include_edge_orfs:
-					pyrodigal_cmd += ['-c']
-				pyrodigal_cmds.append(pyrodigal_cmd)
-				
 				number_of_genomes += 1
-		assert(number_of_genomes >= 2 and number_of_genomes == len(genome_names))
+		assert(number_of_genomes >= 2)
 	except Exception as e:
-		logObject.error('Fewer than 2 genomes downloaded / provided or multiple genome files with the same name but from different directories provided. Exiting ...')
-		sys.stderr.write('Fewer than 2 genomes downloaded / provided or multiple genome files with the same name but from different directories provided. Exiting ...\n')
+		msg = 'Error: fewer than 2 genomes downloaded / provided. Exiting ...'
+		logObject.error(msg)
+		sys.stderr.write(msg + '\n')
+		sys.stderr.write(traceback.format_exc() + '\n')
+		logObject.error(traceback.format_exc())
 		sys.exit(1)
+	else:
+		msg = 'Number of valid genomes provided as input: %d' % number_of_genomes
+		sys.stdout.write(msg + '\n')
+		logObject.info(msg)
+		
+	# filter genomes for MGEs if requested
+	all_genomes_listing_file = outdir + 'All_Genomes_Listing.txt'
+	mge_proc_to_unproc_mapping = None
+	if filter_mge_flag:
+		proc_genomes_listing_file = outdir + 'All_Genomes_Listing_mgecut_Processed.txt'
+		try:
+			mge_proc_to_unproc_mapping, _ = util.filterMGEs(all_genomes_listing_file, outdir, proc_genomes_listing_file, logObject, threads=threads, genomad_database=genomad_database)
+		except Exception as e:
+			msg = 'Error: issue filtering MGEs. Exiting ...'
+			sys.stderr.write(msg + '\n')
+			logObject.error(msg)
+			sys.stderr.write(traceback.format_exc() + '\n')
+			logObject.error(traceback.format_exc())
+			sys.exit(1)
+		all_genomes_listing_file = proc_genomes_listing_file
 
+	combined_proteome_faa = outdir + 'All_Proteins.faa'
 	try:
-		p = multiprocessing.Pool(threads)
-		p.map(util.multiProcess, pyrodigal_cmds)
-		p.close()
+		cidder.runPyrodigal(all_genomes_listing_file, outdir, combined_proteome_faa, logObject, metagenome_mode=metagenome_mode, include_edge_orfs=include_edge_orfs, threads=threads)
 	except Exception as e:
-		msg = 'Issues with parallel running of pyrodigal commands.'
+		msg = 'Error: running gene predictions. Exiting ...'
 		sys.stderr.write(msg + '\n')
 		logObject.error(msg)
-		sys.stderr.write(traceback.format_exc())
+		sys.stderr.write(traceback.format_exc() + '\n')
 		logObject.error(traceback.format_exc())
 		sys.exit(1)
 
-	number_of_predicted_proteomes = 0
-	combined_proteome_faa = outdir + 'All_Proteins.faa'
-	cpf_handle = open(combined_proteome_faa, 'w')
-	for f in os.listdir(pyrodigal_resdir):
-		genome_name = '.faa'.join(f.split('.faa')[:-1])
-		number_of_predicted_proteomes += 1
-		with open(pyrodigal_resdir + f) as oprf:
-			for rec in SeqIO.parse(oprf, 'fasta'):
-				cpf_handle.write('>' + genome_name + '|' + rec.id + '\n' + str(rec.seq) + '\n')
-	cpf_handle.close()
-				
-	# remove indiividual predicted proteome FASTA files
-	shutil.rmtree(pyrodigal_resdir)
-
-	# run CD-HIT on combined proteomes file
+	proteome_name_to_path = {}
+	if len(proteomes) > 0:
+		try:
+			proteome_name_to_path = util.processInputProteomes(proteomes, combined_proteome_faa, logObject, sanity_check=sanity_check_flag)
+		except Exception as e:
+			msg = 'Error: issues processing user-provided proteomes. Exiting ...'
+			sys.stderr.write(msg + '\n')
+			logObject.error(msg)
+			sys.stderr.write(traceback.format_exc() + '\n')
+			logObject.error(traceback.format_exc())
+			sys.exit(1)
+	
 	cdhit_result_prefix = outdir + 'CD-HIT_clustering.faa'
-	cdhit_cluster_file = cdhit_result_prefix + '.clstr'
-	cdhit_mem = 1000.0*memory
-	if cdhit_mem > 0 and cdhit_mem < 1:
-		cdhit_mem = 1
-	cdhit_mem = int(cdhit_mem)
-	cdhit_cmd = ['cd-hit', '-d', '0', '-T', str(threads), '-M', str(cdhit_mem), cd_hit_params, '-i', combined_proteome_faa, '-o', cdhit_result_prefix]
 	try:
-		util.runCmd(cdhit_cmd, logObject, check_files=[cdhit_cluster_file])
-	except:
-		msg = 'Issue with running CD-HIT. This is likely because the memory requested was not sufficient, try increaseing memory using the `-m` argument in cidder.'
-		sys.stderr.write(msg + '\n') 
+		genome_protein_clusters, genome_cluster_counts, c_count, mgc_count, multi_genome_clusters = cidder.runAndProcessCDHIT(combined_proteome_faa, cdhit_result_prefix, cd_hit_params, max_memory, threads, logObject)
+	except Exception as e:
+		msg = 'Error: running or processing CD-HIT clustering. Exiting ...'
+		sys.stderr.write(msg + '\n')
 		logObject.error(msg)
+		sys.stderr.write(traceback.format_exc() + '\n')
+		logObject.error(traceback.format_exc())
 		sys.exit(1)
 
-	# process CD-HIT clustering resulting results
-	genome_protein_clusters = defaultdict(set)
-	cluster_genomes = defaultdict(set)
-	cluster_id = None
-	c_count = 0
-	with open(cdhit_cluster_file) as occf:
-		for line in occf:
-			line = line.strip()
-			if line.startswith('>'):
-				cluster_id = line[1:]
-				c_count += 1
-			else:
-				genome = line.split()[2][1:].split('|')[0]
-				assert(cluster_id != None)
-				genome_protein_clusters[genome].add(cluster_id)
-				cluster_genomes[cluster_id].add(genome)
-
-	multi_genome_clusters = set([])
-	for c in cluster_genomes:
-		if len(cluster_genomes[c]) > 1:
-			multi_genome_clusters.add(c)
-	mgc_count = len(multi_genome_clusters)
-
-	genome_cluster_counts = defaultdict(int)
-	for g in genome_protein_clusters:
-		gpc = len(genome_protein_clusters[g])
-		genome_cluster_counts[genome] = gpc
-
-	# Perform representative genome selection procedure
-	cidder_drep_dir = outdir + 'Dereplicated_Representative_Genomes/'
-	util.setupDirectories([cidder_drep_dir])
 	rep_genomes = set([])
-	rep_genomes_protein_clusters = set([])
-	rep_genomes_multigenome_protein_clusters = set([])
-	
+	# Perform representative genome selection procedure
 	rep_appending_order_file = outdir + 'CiDDER_Results.txt'
-	raof_handle = open(rep_appending_order_file, 'w')
+	cidder_drep_dir = outdir + 'Dereplicated_Representative_Genomes/'
+	util.setupDirectories([cidder_drep_dir])	
+	try:
+		rep_genomes = cidder.performRepresentativeGenomeSelection(genome_protein_clusters, genome_cluster_counts, c_count,
+																  mgc_count, multi_genome_clusters, new_proteins_needed, 
+																  saturation_cutoff, multigenome_saturation_cutoff, 
+																  rep_appending_order_file, genome_name_to_path,
+																  proteome_name_to_path, cidder_drep_dir, logObject,
+																  symlink_flag=symlink_flag)
+	except Exception as e:
+		msg = 'Error: issues with representative genome selection. Exiting ...'
+		sys.stderr.write(msg + '\n')
+		logObject.error(msg)
+		sys.stderr.write(traceback.format_exc() + '\n')
+		logObject.error(traceback.format_exc())
+		sys.exit(1)
 
-	# First, select (one of) the genome(s) with the most distinct protein clusters.
-	for i, gc in sorted(genome_cluster_counts.items(), key=itemgetter(1), reverse=True):
-		if i == 0: 
-			rep_genomes.add(gc[0])
-			msg = 'Starting genome: %s - %d distinct protein clusters' % (gc[0], gc[1])
-			sys.stdout.write(msg + '\n')
-			logObject.info(msg)
-			raof_handle.write(gc[0] + '\t0\n')
-			genome_path = genome_name_to_path[gc[0]]
-			if genome_path in mge_proc_to_unproc_mapping:
-				genome_path = mge_proc_to_unproc_mapping[genome_path]
-			if symlink:
-				symlink_file = cidder_drep_dir + genome_path.split('/')[-1]
-				
-				os.symlink(genome_path, symlink_file)
-			else:
-				shutil.copy2(genome_path, cidder_drep_dir)
-			rep_genomes_protein_clusters = genome_protein_clusters[gc[0]]
-			rep_genomes_multigenome_protein_clusters = genome_protein_clusters[gc[0]].intersection(multi_genome_clusters)
+	if require_similarity > 0.0:
+		try:
+			rep_genomes = cidder.appendAdditionalReps(rep_genomes, genome_protein_clusters, require_similarity, 
+											          rep_appending_order_file, genome_name_to_path, 
+													  proteome_name_to_path, cidder_drep_dir, logObject, 
+													  symlink_flag=False)
+		except Exception as e:
+			msg = 'Error: issues with appending additional representative genomes based on required similarity between non-representative genomes to individual representative genomes. Exiting ...'
+			sys.stderr.write(msg + '\n')
+			logObject.error(msg)
+			sys.stderr.write(traceback.format_exc() + '\n')
+			logObject.error(traceback.format_exc())
+			sys.exit(1)
 
-	curr_saturation = (len(rep_genomes_protein_clusters)/c_count)*100.0
-	curr_multigenome_saturation = (len(rep_genomes_multigenome_protein_clusters)/mgc_count)*100.0
-
-	rep_index = 1
-	if curr_saturation >= saturation_cutoff or curr_multigenome_saturation >= multigenome_saturation_cutoff:
-		msg = 'Requirements met! Protein cluster saturation of representative genomes is: %0.2f%%\nMulti-genome protein cluster saturation of representative genomes is  %0.2f%%' % (curr_saturation, curr_multigenome_saturation)
-		sys.stdout.write(msg + '\n')
-		logObject.info(msg)
-	else:
-		# Start iterative process
-		limits_hit = False
-		while not limits_hit:
-			genome_additions = defaultdict(int)
-			for genome in genome_protein_clusters:
-				if genome in rep_genomes: continue
-				novelty_added = len(genome_protein_clusters[genome].difference(rep_genomes_protein_clusters))
-				genome_additions[genome] = novelty_added
-
-			not_enough_new_proteins = False
-			new_rep = None
-			for ga in sorted(genome_additions.items(), key=itemgetter(1), reverse=True):
-				if ga[1] < new_proteins_needed:
-					not_enough_new_proteins = True
-					break
-				else:
-					new_rep = ga[0]
-					break
-
-			if new_rep != None:
-				genome_path = genome_name_to_path[new_rep]
-				if genome_path in mge_proc_to_unproc_mapping:
-					genome_path = mge_proc_to_unproc_mapping[genome_path]
-				if symlink:
-					symlink_file = cidder_drep_dir + genome_path.split('/')[-1]
-					os.symlink(genome_path, symlink_file)
-				else:
-					shutil.copy2(genome_path, cidder_drep_dir)
-				rep_genomes.add(new_rep)
-				raof_handle.write(new_rep + '\t' + str(rep_index) + '\n')
-				rep_index += 1
-				rep_genomes_protein_clusters = rep_genomes_protein_clusters.union(genome_protein_clusters[new_rep])
-				rep_genomes_multigenome_protein_clusters = rep_genomes_multigenome_protein_clusters.union(genome_protein_clusters[new_rep].intersection(multi_genome_clusters))
-				msg = 'Adding genome %s' % new_rep
-				sys.stdout.write(msg + '\n')
-				logObject.info(msg)
-			
-			curr_saturation = (len(rep_genomes_protein_clusters)/c_count)*100.0
-			curr_multigenome_saturation = (len(rep_genomes_multigenome_protein_clusters)/mgc_count)*100.0
-			
-			if not_enough_new_proteins or curr_saturation >= saturation_cutoff or curr_multigenome_saturation >= multigenome_saturation_cutoff:
-				msg = 'Requirements met! Protein cluster saturation of representative genomes is: %0.2f%%\nMulti-genome protein cluster saturation of representative genomes is %0.2f%%' % (curr_saturation, curr_multigenome_saturation)
-				sys.stdout.write(msg + '\n')
-				logObject.info(msg)
-				limits_hit = True
-	raof_handle.close()
-	
 	msg = 'There were %d representative genomes selected from %d considered!' % (len(rep_genomes), number_of_genomes)
 	sys.stdout.write(msg + '\n')
 	logObject.info(msg)	
@@ -551,97 +327,36 @@ def cidder_main():
 	if determine_clusters_flag:
 		msg = 'Performing assignment of genomes to their nearest representative genomes based on protein cluster containment.'
 		sys.stdout.write(msg + '\n')
+		logObject.info(msg)
 
 		cidder_cluster_result_file = outdir + 'CiDDER_Clustering.txt'
-
-		scrf_handle = open(cidder_cluster_result_file, 'w')
-		scrf_handle.write('genome\tnearest_representative_genome(s)\tmax_containment_of_genome_protein_clusters\tgenome_protein_cluster_count\trepresentative_genome_protein_cluster_count\n')
-
-		for rg in rep_genomes:
-			printlist = [rg, rg, 100.0, len(genome_protein_clusters[rg]), len(genome_protein_clusters[rg])]
-			scrf_handle.write('\t'.join([str(x) for x in printlist]) + '\n')
-
-		for genome in genome_protein_clusters:
-			if genome in rep_genomes: continue
-			fpcs = genome_protein_clusters[genome]
-			max_containment = 0.0
-			rep_genome_distances = []
-			for rep_genome in rep_genomes:
-				rpcs = genome_protein_clusters[rep_genome]
-				containment = len(fpcs.intersection(rpcs))/float(len(fpcs))
-				rep_genome_distances.append([rep_genome, containment])
-				if max_containment < containment:
-					max_containment = containment
-
-			superset_refs = set([])
-			for rgr in sorted(rep_genome_distances, key=itemgetter(1), reverse=True):
-				if rgr[1] == max_containment:
-					superset_refs.add(rgr[0])
-				else:
-					break
-
-			printlist = [genome, ', '.join(sorted(superset_refs)), 
-				         str(max_containment*100.0), str(len(fpcs)), str(len(rpcs))]
-			scrf_handle.write('\t'.join(printlist) + '\n')
-
-		scrf_handle.close()
-
+		try:
+			cidder.secondaryClustering(rep_genomes, genome_protein_clusters, cidder_cluster_result_file)
+		except:
+			msg = 'Error: issues with secondary clustering. Exiting ...'
+			sys.stderr.write(msg + '\n')
+			logObject.error(msg)
+			sys.stderr.write(traceback.format_exc() + '\n')
+			logObject.error(traceback.format_exc())
+			sys.exit(1)
+		
 	if determine_clusters_ani_flag:
-		msg = 'Performing assignment of genomes to their nearest representative genomes based on skani ANI estimates.'
+		msg = 'Performing assignment of genomes to their nearest representative genomes based on ANI.'
 		sys.stdout.write(msg + '\n')
-		
-		# run skani triangle
+		logObject.info(msg)
+
 		skani_result_file = outdir + 'Skani_Triangle_Edge_Output.txt'
-		
-		skani_triangle_cmd = ['skani', 'triangle', '-l', all_genomes_listing_file, '--min-af', '80.0', '-E', '-t', str(threads), '-o', skani_result_file]
-		util.runCmd(skani_triangle_cmd, logObject, check_files=[skani_result_file])
-
 		cidder_cluster_result_file = outdir + 'CiDDER_skani_Clustering.txt'
-
-		scrf_handle = open(cidder_cluster_result_file, 'w')
-		scrf_handle.write('genome\tnearest_representative_genome\taverage_nucleotide_identity\talignment_fraction\n')
-
-		for rg in rep_genomes:
-			scrf_handle.write(rg + '\t' + rg + '\t100.0\t100.0\n')
-
-		best_rep_match_at_default_af = defaultdict(lambda: [set(["NA"]), 0.0, 0.0])
-		with open(skani_result_file) as osrf:
-			for i, line in enumerate(osrf):
-				if i == 0: continue
-				line = line.strip()
-				ref, que, ani, raf, qaf, _, _ = line.split('\t')
-
-				ref = '.'.join(ref.split('/')[-1].split('.')[:-1])
-				que = '.'.join(que.split('/')[-1].split('.')[:-1])
-
-				ani = float(ani)
-				raf = float(raf)
-				qaf = float(qaf)
-				if que in rep_genomes and not ref in rep_genomes:
-					if ani > best_rep_match_at_default_af[ref][1]:
-						best_rep_match_at_default_af[ref] = [set([que]), ani, raf]
-					elif ani == best_rep_match_at_default_af[ref][1]:
-						if raf > best_rep_match_at_default_af[ref][2]:
-							best_rep_match_at_default_af[ref] = [set([que]), ani, raf]
-						elif raf == best_rep_match_at_default_af[ref][2]:
-							best_rep_match_at_default_af[ref][0].add(que)
-
-				if ref in rep_genomes and not que in rep_genomes:
-					if ani > best_rep_match_at_default_af[que][1]:
-						best_rep_match_at_default_af[que] = [set([ref]), ani, qaf]
-					elif ani == best_rep_match_at_default_af[que][1]:
-						if qaf > best_rep_match_at_default_af[que][2]:
-							best_rep_match_at_default_af[que] = [set([ref]), ani, qaf]
-						elif qaf == best_rep_match_at_default_af[que][2]:
-							best_rep_match_at_default_af[que][0].add(ref)
-											
-		for gen in genome_protein_clusters:
-			if gen in rep_genomes: continue
-			scrf_handle.write('\t'.join([gen, ', '.join(sorted(best_rep_match_at_default_af[gen][0])), 
-								str(best_rep_match_at_default_af[gen][1]), 
-								str(best_rep_match_at_default_af[gen][2])]) + '\n')
-				
-		scrf_handle.close()
+		try:
+			cidder.secondaryClusteringSkani(all_genomes_listing_file, rep_genomes, genome_protein_clusters, skani_result_file, 
+								            cidder_cluster_result_file, logObject, threads=threads)
+		except:
+			msg = 'Error: issues with secondary clustering based on skani. Exiting ...'
+			sys.stderr.write(msg + '\n')
+			logObject.error(msg)
+			sys.stderr.write(traceback.format_exc() + '\n')
+			logObject.error(traceback.format_exc())
+			sys.exit(1)
 
 	# close logging object and exit
 	logObject.info('******************\nCiDDER finished!\n******************\nDirectory with representative genomes can be found at: %s' % cidder_drep_dir)
@@ -655,4 +370,11 @@ def cidder_main():
 	sys.exit(0)
 
 if __name__ == '__main__':
-	cidder_main()
+    try:
+        cidder_main()
+    except KeyboardInterrupt:
+        print('Interrupted')
+        try:
+            sys.exit(130)
+        except SystemExit:
+            os._exit(130)

@@ -1,11 +1,11 @@
 # skDER (& CiDDER)
 
-[![Preprint](https://img.shields.io/badge/Manuscript-bioRxiv-darkblue?style=flat-square&maxAge=2678400)](https://www.biorxiv.org/content/10.1101/2023.09.27.559801v3)
+[![Preprint](https://img.shields.io/badge/Manuscript-bioRxiv-darkblue?style=flat-square&maxAge=2678400)](https://www.biorxiv.org/content/10.1101/2023.09.27.559801v2)
 [![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat)](http://bioconda.github.io/recipes/skder/README.html) [![Conda](https://img.shields.io/conda/dn/bioconda/skder.svg)](https://anaconda.org/bioconda/skder/files)
 [![Anaconda-Server Badge](https://anaconda.org/bioconda/skder/badges/platforms.svg)](https://anaconda.org/bioconda/skder)
 [![Anaconda-Server Badge](https://anaconda.org/bioconda/skder/badges/license.svg)](https://anaconda.org/bioconda/skder)
 
-skDER (& CIDDER): efficient & high-resolution dereplication of microbial genomes to select representatives.
+skDER (& CIDDER): efficient & high-resolution dereplication of microbial genomes to select representatives for comparative genomics and metagenomics.
 
 > ***Note:*** Please make sure to use version 1.0.7 or greater to avoid a bug in previous versions!
 
@@ -190,41 +190,40 @@ skder -h
 The help function should return the following:
 
 ```
-usage: skder [-h] [-g GENOMES [GENOMES ...]] [-t TAXA_NAME] [-r GTDB_RELEASE] -o OUTPUT_DIRECTORY [-d DEREPLICATION_MODE] [-i PERCENT_IDENTITY_CUTOFF] [-tc] [-f ALIGNED_FRACTION_CUTOFF]
-             [-a MAX_AF_DISTANCE_CUTOFF] [-p SKANI_TRIANGLE_PARAMETERS] [-s] [-fm] [-gd GENOMAD_DATABASE] [-n] [-l] [-u] [-c THREADS] [-v]
+usage: skder [-h] [-g GENOMES [GENOMES ...]] [-t TAXA_NAME] -o OUTPUT_DIRECTORY [-d DEREPLICATION_MODE] [-i PERCENT_IDENTITY_CUTOFF] [-tc] [-f ALIGNED_FRACTION_CUTOFF] [-a MAX_AF_DISTANCE_CUTOFF]
+             [-p SKANI_TRIANGLE_PARAMETERS] [-s] [-fm] [-gd GENOMAD_DATABASE] [-n] [-l] [-r GTDB_RELEASE] [-auto] [-mm MAX_MEMORY] [-c THREADS] [-v]
 
 	Program: skder
 	Author: Rauf Salamzade
 	Affiliation: Kalan Lab, UW Madison, Department of Medical Microbiology and Immunology
 
-	skDER: efficient & high-resolution dereplication of microbial genomes to select 
+	skDER: efficient & high-resolution dereplication of microbial genomes to select
 		   representative genomes.
 
-	skDER will perform dereplication of genomes using skani average nucleotide identity 
-	(ANI) and aligned fraction (AF) estimates and either a dynamic programming or 
-	greedy-based based approach. It assesses such pairwise ANI & AF estimates to determine 
-	whether two genomes are similar to each other and then chooses which genome is better 
-	suited to serve as a representative based on assembly N50 (favoring the more contiguous 
-	assembly) and connectedness (favoring genomes deemed similar to a greater number of 
+	skDER will perform dereplication of genomes using skani average nucleotide identity
+	(ANI) and aligned fraction (AF) estimates and either a dynamic programming or
+	greedy-based based approach. It assesses such pairwise ANI & AF estimates to determine
+	whether two genomes are similar to each other and then chooses which genome is better
+	suited to serve as a representative based on assembly N50 (favoring the more contiguous
+	assembly) and connectedness (favoring genomes deemed similar to a greater number of
 	alternate genomes).
-								  
-	Note, if --filter-mge is requested, the original paths to genomes are reported but 
-	the statistics reported in the clustering reports (e.g. ANI, AF) will all be based 
-	on processed (MGE filtered) genomes. Importantly, computation of N50 is performed 
-	before MGE filtering to not penalize genomes of high quality that simply have many 
+
+	Note, if --filter-mge is requested, the original paths to genomes are reported but
+	the statistics reported in the clustering reports (e.g. ANI, AF) will all be based
+	on processed (MGE filtered) genomes. Importantly, computation of N50 is performed
+	before MGE filtering to not penalize genomes of high quality that simply have many
 	MGEs and enable them to still be selected as representatives.
-	
-    If you use skDER for your research, please kindly cite both:
 
-    Fast and robust metagenomic sequence comparison through sparse chaining with skani.
-    Nature Methods. Shaw and Yu, 2023.
+	If you use skDER for your research, please kindly cite both:
 
-    and
-    
-    skDER & CiDDER: microbial genome dereplication approaches for comparative genomic 
-    and metagenomic applications. Salamzade, Kottapalli, and Kalan, 2024
+	Fast and robust metagenomic sequence comparison through sparse chaining with skani.
+	Nature Methods. Shaw and Yu, 2023.
 
-    
+	and
+
+	skDER & CiDDER: microbial genome dereplication approaches for comparative genomic
+	and metagenomic applications. Salamzade, Kottapalli, and Kalan, 2025.
+
 
 options:
   -h, --help            show this help message and exit
@@ -237,8 +236,6 @@ options:
                         Genus or species identifier from GTDB for which to
                         download genomes for and include in
                         dereplication analysis [Optional].
-  -r GTDB_RELEASE, --gtdb-release GTDB_RELEASE
-                        Which GTDB release to use if -t argument issued [Default is R220].
   -o OUTPUT_DIRECTORY, --output-directory OUTPUT_DIRECTORY
                         Output directory.
   -d DEREPLICATION_MODE, --dereplication-mode DEREPLICATION_MODE
@@ -246,19 +243,20 @@ options:
                         comprehensive) approach to selecting representative genomes.
                         [Default is "greedy"]
   -i PERCENT_IDENTITY_CUTOFF, --percent-identity-cutoff PERCENT_IDENTITY_CUTOFF
-                        ANI cutoff for dereplication [Default is 99.0].
+                        ANI cutoff for dereplication [Default is 99.5].
   -tc, --test-cutoffs   Assess clustering using various pre-selected cutoffs.
   -f ALIGNED_FRACTION_CUTOFF, --aligned-fraction-cutoff ALIGNED_FRACTION_CUTOFF
                         Aligned cutoff threshold for dereplication - only needed by
-                        one genome [Default is 90.0].
+                        one genome [Default is 50.0].
   -a MAX_AF_DISTANCE_CUTOFF, --max-af-distance-cutoff MAX_AF_DISTANCE_CUTOFF
                         Maximum difference for aligned fraction between a pair to
                         automatically disqualify the genome with a higher
-                        AF from being a representative.
+                        AF from being a representative [Default is 10.0].
   -p SKANI_TRIANGLE_PARAMETERS, --skani-triangle-parameters SKANI_TRIANGLE_PARAMETERS
                         Options for skani triangle. Note ANI and AF cutoffs
                         are specified separately and the -E parameter is always
-                        requested. [Default is "-s 90.0"].
+                        requested. [Default is "-s X", where X is
+                        10 below the ANI cutoff].
   -s, --sanity-check    Confirm each FASTA file provided or downloaded is actually
                         a FASTA file. Makes it slower, but generally
                         good practice.
@@ -275,8 +273,14 @@ options:
                         genomes to their closest representative genomes.
   -l, --symlink         Symlink representative genomes in results subdirectory
                         instead of performing a copy of the files.
-  -u, --ncbi-nlm-url    Try using the NCBI ftp address with '.nlm' for
-                        ncbi-genome-download if there are issues.
+  -r GTDB_RELEASE, --gtdb-release GTDB_RELEASE
+                        Which GTDB release to use if -t argument issued [Default is R226].
+  -auto, --automate     Automatically skip warnings and download genomes from NCBI if -t
+                        argument issued. Automatation off by default to prevent
+                        unexpected downloading of large genomes [Default
+                        is False].
+  -mm MAX_MEMORY, --max-memory MAX_MEMORY
+                        Max memory in Gigabytes [Default is 0 = unlimited].
   -c THREADS, --threads THREADS
                         Number of threads/processes to use [Default is 1].
   -v, --version         Report version of skDER.
@@ -292,45 +296,45 @@ cidder -h
 The help function should return the following:
 
 ```
-usage: cidder [-h] [-g GENOMES [GENOMES ...]] [-t TAXA_NAME] [-r GTDB_RELEASE] -o OUTPUT_DIRECTORY [-p CD_HIT_PARAMS] [-mg] [-e] [-a NEW_PROTEINS_NEEDED] [-ts TOTAL_SATURATION]
-              [-mgs MULTI_GENOME_SATURATION] [-s] [-fm] [-gd GENOMAD_DATABASE] [-n] [-ns] [-l] [-u] [-c THREADS] [-m MEMORY] [-v]
+usage: cidder [-h] [-g GENOMES [GENOMES ...]] [-p PROTEOMES [PROTEOMES ...]] [-t TAXA_NAME] [-a NEW_PROTEINS_NEEDED] [-ts TOTAL_SATURATION] [-mgs MULTI_GENOME_SATURATION] [-rs REQUIRE_SIMILARITY] -o
+              OUTPUT_DIRECTORY [-r GTDB_RELEASE] [-cdp CD_HIT_PARAMS] [-mg] [-e] [-s] [-fm] [-gd GENOMAD_DATABASE] [-n] [-ns] [-l] [-c THREADS] [-mm MAX_MEMORY] [-v]
 
 	Program: cidder
 	Author: Rauf Salamzade
 	Affiliation: Kalan Lab, UW Madison, Department of Medical Microbiology and Immunology
 
-	CiDDER: Performs genome dereplication based on CD-HIT clustering of proteins to 
-			select a representative set of genomes which adequately samples the 
-			pangenome space. Because gene prediction is performed using pyrodigal, 
-			geneder only works for bacterial genomes at the moment. 
-								  
-	The general algorithm is to first select the genome with the most number of distinct 
-	open-reading-frames (ORFS; predicted genes) and then iteratively add genomes based on 
+	CiDDER: Performs genome dereplication based on CD-HIT clustering of proteins to
+			select a representative set of genomes which adequately samples the
+			pangenome space. Because gene prediction is performed using pyrodigal,
+			geneder only works for bacterial genomes at the moment.
+
+	The general algorithm is to first select the genome with the most number of distinct
+	open-reading-frames (ORFS; predicted genes) and then iteratively add genomes based on
 	which maximizes the number of new ORFs. This iterative addition of selected genomes
-	is performed until: (i) the next genome to add does not have a minimum of X new disintct 
-	ORFs to add to the set of ORFs belonging, (ii) some percentage Y of the total distinct 
+	is performed until: (i) the next genome to add does not have a minimum of X new disintct
+	ORFs to add to the set of ORFs belonging, (ii) some percentage Y of the total distinct
 	ORFs are found to have been sampled, or (iii) some percentage Z of the total multi-genome
-	distinct ORFs are found to have been sampled. The "added-on" genomes from the iterative 
-	procedure are listed as representative genomes.  
-								  
-	For information on how to alter CD-HIT parameters, please see: 
+	distinct ORFs are found to have been sampled. The "added-on" genomes from the iterative
+	procedure are listed as representative genomes.
+
+	For information on how to alter CD-HIT parameters, please see:
 	https://github.com/weizhongli/cdhit/blob/master/doc/cdhit-user-guide.wiki#cd-hit
 
-	Note, if --filter-mge is requested, the statistics reported in clustering reports (number 
-	of proteins overlapping, ANI) in the clustering reports will all be based on processed 
-	(MGE filtered) genomes. However, the final representative genomes in the 
+	Note, if --filter-mge is requested, the statistics reported in clustering reports (number
+	of proteins overlapping, ANI) in the clustering reports will all be based on processed
+	(MGE filtered) genomes. However, the final representative genomes in the
 	Dereplicated_Representative_Genomes/ folder will be the original unprocesed genomes.
 
-    If you use CiDDER for your research, please kindly cite both:
+	If you use CiDDER for your research, please kindly cite both:
 
-    CD-HIT: accelerated for clustering the next-generation sequencing data. Bioinformatics.
-    Fu et al. 2012
+	CD-HIT: accelerated for clustering the next-generation sequencing data. Bioinformatics.
+	Fu et al. 2012.
 
-    and
+	and
 
-    skDER & CiDDER: microbial genome dereplication approaches for comparative genomic and 
-    metagenomic applications. Salamzade, Kottapalli, and Kalan, 2024.
-    
+	skDER & CiDDER: microbial genome dereplication approaches for comparative genomic and
+	metagenomic applications. Salamzade, Kottapalli, and Kalan, 2025.
+
 
 options:
   -h, --help            show this help message and exit
@@ -339,22 +343,15 @@ options:
                         directories. Files should be in FASTA format and can be gzipped
                         (accepted suffices are: *.fasta,
                         *.fa, *.fas, or *.fna) [Optional].
+  -p PROTEOMES [PROTEOMES ...], --proteomes PROTEOMES [PROTEOMES ...]
+                        Proteome file paths or paths to containing
+                        directories. Files should be in FASTA format and can be gzipped
+                        (accepted suffices are: *.fasta,
+                        *.fa, or *.faa) [Optional].
   -t TAXA_NAME, --taxa-name TAXA_NAME
                         Genus or species identifier from GTDB for which to
                         download genomes for and include in
                         dereplication analysis [Optional].
-  -r GTDB_RELEASE, --gtdb-release GTDB_RELEASE
-                        Which GTDB release to use if -t argument issued [Default is R220].
-  -o OUTPUT_DIRECTORY, --output-directory OUTPUT_DIRECTORY
-                        Output directory.
-  -p CD_HIT_PARAMS, --cd-hit-params CD_HIT_PARAMS
-                        CD-HIT parameters to use for clustering proteins - select carefully
-                        (don't set threads or memory - those are done by default in cidder) and
-                        surround by quotes [Default is: "-n 5 -c 0.95 -aL 0.75 -aS 0.90"]
-  -mg, --metagenome-mode
-                        Run pyrodigal using metagenome mode.
-  -e, --include-edge-orfs
-                        Include proteins from ORFs that hang off the edge of a contig/scaffold.
   -a NEW_PROTEINS_NEEDED, --new-proteins-needed NEW_PROTEINS_NEEDED
                         The number of new protein clusters needed to add [Default is 0].
   -ts TOTAL_SATURATION, --total-saturation TOTAL_SATURATION
@@ -363,6 +360,21 @@ options:
   -mgs MULTI_GENOME_SATURATION, --multi-genome-saturation MULTI_GENOME_SATURATION
                         The percentage of total multi-genome protein clusters needed to stop
                         representative genome selection [Default is 100.0].
+  -rs REQUIRE_SIMILARITY, --require-similarity REQUIRE_SIMILARITY
+                        Require non-representative genomes to have X% of their protein
+                        clusters represented by an individual representative genome [Default is 0.0].
+  -o OUTPUT_DIRECTORY, --output-directory OUTPUT_DIRECTORY
+                        Output directory.
+  -r GTDB_RELEASE, --gtdb-release GTDB_RELEASE
+                        Which GTDB release to use if -t argument issued [Default is R226].
+  -cdp CD_HIT_PARAMS, --cd-hit-params CD_HIT_PARAMS
+                        CD-HIT parameters to use for clustering proteins - select carefully
+                        (don't set threads or memory - those are done by default in cidder) and
+                        surround by quotes [Default is: "-n 5 -c 0.95 -aL 0.75 -aS 0.90"]
+  -mg, --metagenome-mode
+                        Run pyrodigal using metagenome mode.
+  -e, --include-edge-orfs
+                        Include proteins from ORFs that hang off the edge of a contig/scaffold.
   -s, --sanity-check    Confirm each FASTA file provided or downloaded is actually
                         a FASTA file. Makes it slower, but generally
                         good practice.
@@ -384,12 +396,10 @@ options:
                         ANI.
   -l, --symlink         Symlink representative genomes in results subdirectory
                         instead of performing a copy of the files.
-  -u, --ncbi-nlm-url    Try using the NCBI ftp address with '.nlm' for
-                        ncbi-genome-download if there are issues.
   -c THREADS, --threads THREADS
                         Number of threads/processes to use [Default is 1].
-  -m MEMORY, --memory MEMORY
-                        The memory limit for CD-HIT in Gigabytes [Default is 0 = unlimited].
+  -mm MAX_MEMORY, --max-memory MAX_MEMORY
+                        Max memory in Gigabytes [Default is 0 = unlimited].
   -v, --version         Report version of CiDDER.
 ```
 
