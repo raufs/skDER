@@ -285,6 +285,10 @@ def cidder_main():
 		sys.stderr.write(traceback.format_exc() + '\n')
 		logObject.error(traceback.format_exc())
 		sys.exit(1)
+	elif len(proteome_name_to_path) > 0:
+		msg = 'Total number of valid genomes/proteomes provided as input: %d' % number_of_genomes
+		sys.stdout.write(msg + '\n')
+		logObject.info(msg)
 
 	cdhit_result_prefix = outdir + 'CD-HIT_clustering.faa'
 	try:
