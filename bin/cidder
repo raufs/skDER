@@ -90,8 +90,8 @@ def create_parser():
 	metagenomic applications. Salamzade, Kottapalli, and Kalan, 2025.
     """, formatter_class=argparse.RawTextHelpFormatter)
 
-	parser.add_argument('-g', '--genomes', nargs='+', help='Genome assembly file paths or paths to containing\ndirectories. Files should be in FASTA format and can be gzipped\n(accepted suffices are: *.fasta,\n*.fa, *.fas, or *.fna) [Optional].', required=False, default=[])
-	parser.add_argument('-p', '--proteomes', nargs='+', help='Proteome file paths or paths to containing\ndirectories. Files should be in FASTA format and can be gzipped\n(accepted suffices are: *.fasta,\n*.fa, or *.faa) [Optional].', required=False, default=[])
+	parser.add_argument('-g', '--genomes', nargs='+', help='Genome assembly file paths or paths to containing\ndirectories. Files should be in FASTA format (accepted suffices\nare: *.fasta, *.fa, *.fas, or *.fna) [Optional].', required=False, default=[])
+	parser.add_argument('-p', '--proteomes', nargs='+', help='Proteome file paths or paths to containing\ndirectories. Files should be in FASTA format (accepted suffices\nare: *.fasta, *.fa, or *.faa) [Optional].', required=False, default=[])
 	parser.add_argument('-t', '--taxa-name', help='Genus or species identifier from GTDB for which to\ndownload genomes for and include in\ndereplication analysis [Optional].', required=False, default=None)
 	parser.add_argument('-a', '--new-proteins-needed', type=int, help="The number of new protein clusters needed to add [Default is 0].", required=False, default=0)
 	parser.add_argument('-ts', '--total-saturation', type=float, help="The percentage of total proteins clusters needed to stop representative\ngenome selection [Default is 90.0].", required=False, default=90.0)
@@ -268,7 +268,7 @@ def cidder_main():
 	proteome_name_to_path = {}
 	if len(proteomes) > 0:
 		try:
-			proteome_name_to_path = util.processInputProteomes(proteomes, combined_proteome_faa, genome_name_to_path, logObject, sanity_check=sanity_check_flag)
+			proteome_name_to_path = util.processInputProteomes(proteomes, combined_proteome_faa, genome_name_to_path, logObject, sanity_check=sanity_check_flag, allow_gzipped=False)
 		except Exception as e:
 			msg = 'Error: issues processing user-provided proteomes. Exiting ...'
 			sys.stderr.write(msg + '\n')

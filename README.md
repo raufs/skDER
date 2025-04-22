@@ -340,14 +340,12 @@ options:
   -h, --help            show this help message and exit
   -g GENOMES [GENOMES ...], --genomes GENOMES [GENOMES ...]
                         Genome assembly file paths or paths to containing
-                        directories. Files should be in FASTA format and can be gzipped
-                        (accepted suffices are: *.fasta,
-                        *.fa, *.fas, or *.fna) [Optional].
+                        directories. Files should be in FASTA format (accepted suffices
+                        are: *.fasta, *.fa, *.fas, or *.fna) [Optional].
   -p PROTEOMES [PROTEOMES ...], --proteomes PROTEOMES [PROTEOMES ...]
                         Proteome file paths or paths to containing
-                        directories. Files should be in FASTA format and can be gzipped
-                        (accepted suffices are: *.fasta,
-                        *.fa, or *.faa) [Optional].
+                        directories. Files should be in FASTA format (accepted suffices
+                        are: *.fasta, *.fa, or *.faa) [Optional].
   -t TAXA_NAME, --taxa-name TAXA_NAME
                         Genus or species identifier from GTDB for which to
                         download genomes for and include in
