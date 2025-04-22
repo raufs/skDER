@@ -112,7 +112,7 @@ def prodigalAndReformat():
 			input_genomic_fasta_file = updated_genomic_fasta_file
 		assert(util.is_fasta(input_genomic_fasta_file))
 	except:
-		msg = 'Issue with uncompression of input genome.'
+		msg = 'Issue with uncompression of input genome or validating genome is in FASTA format.'
 		sys.stderr.write(msg + '\n')
 		sys.exit(1)
 
