@@ -268,7 +268,7 @@ def cidder_main():
 	proteome_name_to_path = {}
 	if len(proteomes) > 0:
 		try:
-			proteome_name_to_path = util.processInputProteomes(proteomes, combined_proteome_faa, logObject, sanity_check=sanity_check_flag)
+			proteome_name_to_path = util.processInputProteomes(proteomes, combined_proteome_faa, genome_name_to_path, logObject, sanity_check=sanity_check_flag)
 		except Exception as e:
 			msg = 'Error: issues processing user-provided proteomes. Exiting ...'
 			sys.stderr.write(msg + '\n')
@@ -277,7 +277,7 @@ def cidder_main():
 			logObject.error(traceback.format_exc())
 			sys.exit(1)
 
-	number_of_genomes += number_of_genomes + len(proteome_name_to_path)
+	number_of_genomes += len(proteome_name_to_path)
 	if number_of_genomes < 2:
 		msg = 'Error: fewer than 2 genomes downloaded / provided. Exiting ...'
 		logObject.error(msg)

@@ -185,7 +185,7 @@ def downloadGTDBGenomes(taxa_name, gtdb_release, outdir, genome_listing_file, lo
 		sys.stdout.write(msg + '\n')
 		logObject.info(msg)
 
-def processInputProteomes(proteomes, combined_proteome_faa, logObject, sanity_check=False):
+def processInputProteomes(proteomes, combined_proteome_faa, genome_to_path, logObject, sanity_check=False):
 	combined_proteome_handle = open(combined_proteome_faa, 'a+')
 	proteome_name_to_path = {}
 	for p in proteomes:
@@ -199,6 +199,12 @@ def processInputProteomes(proteomes, combined_proteome_faa, logObject, sanity_ch
 					proteome_name = '.'.join(proteome_file.split('/')[-1][:-3].split('.')[:-1])
 					suffix = proteome_file[:-3].split('.')[-1].lower()
 				
+				if proteome_name in genome_to_path:
+					msg = 'Warning: proteome %s has the same name as a genome. Skipping ...' % proteome_file
+					logObject.warning(msg)
+					sys.stderr.write(msg + '\n')
+					continue
+
 				try:
 					assert (suffix in ACCEPTED_PROTEIN_FASTA_SUFFICES)
 				except:
@@ -237,7 +243,13 @@ def processInputProteomes(proteomes, combined_proteome_faa, logObject, sanity_ch
 			if proteome_file.endswith('.gz'):
 				proteome_name = '.'.join(proteome_file.split('/')[-1][:-3].split('.')[:-1])
 				suffix = proteome_file.split('/')[-1][:-3].split('.')[-1].lower()
-			
+				
+			if proteome_name in genome_to_path:
+				msg = 'Warning: proteome %s has the same name as a genome. Skipping ...' % proteome_file
+				logObject.warning(msg)
+				sys.stderr.write(msg + '\n')
+				continue
+
 			try:
 				assert (suffix in ACCEPTED_PROTEIN_FASTA_SUFFICES)
 			except:
