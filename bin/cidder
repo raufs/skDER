@@ -208,9 +208,9 @@ def cidder_main():
 
 	# process input	
 	if taxa_name != "None" and taxa_name != None:
-		util.downloadGTDBGenomes(taxa_name, gtdb_release, outdir, all_genomes_listing_file, logObject, sanity_check=sanity_check_flag, automated_download=automate_flag)
+		util.downloadGTDBGenomes(taxa_name, gtdb_release, outdir, all_genomes_listing_file, logObject, sanity_check=sanity_check_flag, automated_download=automate_flag, gunzip=True, threads=threads)
 	if len(genomes) > 0:
-		util.processInputGenomes(genomes, all_genomes_listing_file, logObject, sanity_check=sanity_check_flag)
+		util.processInputGenomes(genomes, all_genomes_listing_file, logObject, sanity_check=sanity_check_flag, allow_gzipped=False)
 
 	number_of_genomes = 0
 	genome_name_to_path = {}

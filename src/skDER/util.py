@@ -68,7 +68,7 @@ def _download_files(urls, resdir):
 	loop.run_until_complete(main())
 	loop.close()
 
-def downloadGTDBGenomes(taxa_name, gtdb_release, outdir, genome_listing_file, logObject, sanity_check=False, automated_download=False):
+def downloadGTDBGenomes(taxa_name, gtdb_release, outdir, genome_listing_file, logObject, sanity_check=False, automated_download=False, gunzip=False, threads=1):
 	"""
 	Download GTDB genomes from NCBI Genbank using ncbi-genome-download.
 	**********************************************************
@@ -157,6 +157,7 @@ def downloadGTDBGenomes(taxa_name, gtdb_release, outdir, genome_listing_file, lo
 
 		gf_listing_handle = open(genome_listing_file, 'a+')
 		final_genome_count = 0
+		gunzip_cmds = []
 		for f in os.listdir(genomes_directory):
 			genome_file = genomes_directory + f
 			if not os.path.isfile(genome_file): continue
@@ -178,9 +179,27 @@ def downloadGTDBGenomes(taxa_name, gtdb_release, outdir, genome_listing_file, lo
 			polished_filename = url_file_to_polished_name[f]
 			renamed_gfile = genomes_directory + polished_filename
 			os.rename(genome_file, renamed_gfile)
+			if gunzip:
+				gunzip_cmds.append(['gunzip', renamed_gfile])
+				renamed_gfile = renamed_gfile[:-3]
 			gf_listing_handle.write(renamed_gfile + '\n')
 		gf_listing_handle.close()
-		
+
+		if len(gunzip_cmds) > 0:
+			try:
+				msg = "Uncompressing %d genomic assemblies for gene calling!" % genome_count
+				sys.stdout.write(msg + '\n')
+				logObject.info(msg)
+				p = multiprocessing.Pool(threads)
+				for _ in tqdm.tqdm(p.imap_unordered(multiProcess, gunzip_cmds), total=len(gunzip_cmds)):
+					pass
+				p.close()
+			except Exception as e:
+				msg = "An error occurred during multiprocessing: %s" % str(e)
+				sys.stderr.write(msg + '\n')
+				logObject.info(msg)
+	
+
 		msg = 'Was able to download %d of %d genomes belonging to taxa "%s" in GTDB %s.' % (final_genome_count, genome_count, taxa_name, gtdb_release)
 		sys.stdout.write(msg + '\n')
 		logObject.info(msg)
@@ -288,7 +307,7 @@ def processInputProteomes(proteomes, combined_proteome_faa, genome_to_path, logO
 	combined_proteome_handle.close()
 	return proteome_name_to_path
 
-def processInputGenomes(genomes, genome_listing_file, logObject, sanity_check=False):
+def processInputGenomes(genomes, genome_listing_file, logObject, sanity_check=False, allow_gzipped=True):
 	gf_listing_handle = open(genome_listing_file, 'a+')
 	for g in genomes:
 		g_path = os.path.abspath(g)
@@ -298,7 +317,11 @@ def processInputGenomes(genomes, genome_listing_file, logObject, sanity_check=Fa
 				suffix = genome_file.split('/')[-1].split('.')[-1].lower()
 				if genome_file.endswith('.gz'):
 					suffix = genome_file.split('/')[-1][:-3].split('.')[-1].lower()
-				
+					if not allow_gzipped:
+						msg = 'Warning: genome %s is gzipped. Skipping ...' % genome_file
+						sys.stderr.write(msg + '\n')
+						logObject.warning(msg)
+						continue
 				try:
 					assert (suffix in ACCEPTED_FASTA_SUFFICES)
 				except:
@@ -323,7 +346,11 @@ def processInputGenomes(genomes, genome_listing_file, logObject, sanity_check=Fa
 			suffix = genome_file.split('/')[-1].split('.')[-1].lower()
 			if genome_file.endswith('.gz'):
 				suffix = genome_file.split('/')[-1][:-3].split('.')[-1].lower()
-			
+				if not allow_gzipped:
+					msg = 'Warning: genome %s is gzipped. Skipping ...' % genome_file
+					sys.stderr.write(msg + '\n')
+					logObject.warning(msg)
+					continue
 			try:
 				assert (suffix in ACCEPTED_FASTA_SUFFICES)
 			except:
@@ -393,7 +420,6 @@ def determineN50(genome_listing_file, outdir, logObject, threads=1):
 		p = multiprocessing.Pool(threads)
 		for _ in tqdm.tqdm(p.imap_unordered(compute_n50, n50_inputs), total=len(n50_inputs)):
 			pass
-		p.map(compute_n50, n50_inputs)
 		p.close()
 	except Exception as e:
 		msg = "An error occurred during multiprocessing: %s" % str(e)
