@@ -112,7 +112,9 @@ def prodigalAndReformat():
 			input_genomic_fasta_file = updated_genomic_fasta_file
 		assert(util.is_fasta(input_genomic_fasta_file))
 	except:
-		raise RuntimeError('Input genomic assembly does not appear to be in FASTA format.')
+		msg = 'Issue with uncompression of input genome.'
+		sys.stderr.write(msg + '\n')
+		sys.exit(1)
 
 	# Step 1: Run Prodigal (if needed)
 	og_prod_pred_prot_file = outdir + sample_name + '.original_predicted_proteome'
