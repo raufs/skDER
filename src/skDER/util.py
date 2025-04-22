@@ -535,7 +535,7 @@ def closeLoggerObject(logObject):
 		handler.close()
 		logObject.removeHandler(handler)
 
-def setupDirectories(directories, automate=False):
+def setupDirectories(directories, automate_flag=False):
 	"""
 	Description:
 	This is a generalizable function to create directories.
@@ -548,7 +548,7 @@ def setupDirectories(directories, automate=False):
 		assert (type(directories) is list)
 		for d in directories:
 			if os.path.isdir(d):
-				if automate:
+				if automate_flag:
 					os.system('rm -fr %s' % d)
 				else:	
 					response = input("The directory %s already exists, will delete and recreate, is this ok? (yes/no): " % d)
