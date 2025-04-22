@@ -188,67 +188,151 @@ def downloadGTDBGenomes(taxa_name, gtdb_release, outdir, genome_listing_file, lo
 def processInputProteomes(proteomes, combined_proteome_faa, logObject, sanity_check=False):
 	combined_proteome_handle = open(combined_proteome_faa, 'a+')
 	proteome_name_to_path = {}
-	for f in proteomes:
-		if os.path.isfile(f):
-			proteome_file = os.path.abspath(f)
-			suffix = proteome_file.split('.')[-1].lower()
+	for p in proteomes:
+		p_path = os.path.abspath(p)
+		if os.path.isdir(p_path):
+			for f in os.listdir(p_path):
+				proteome_file = p_path + '/' + f
+				proteome_name = '.'.join(proteome_file.split('/')[-1].split('.')[:-1])
+				suffix = proteome_file.split('.')[-1].lower()
+				if proteome_file.endswith('.gz'):
+					proteome_name = '.'.join(proteome_file.split('/')[-1][:-3].split('.')[:-1])
+					suffix = proteome_file[:-3].split('.')[-1].lower()
+				
+				try:
+					assert (suffix in ACCEPTED_PROTEIN_FASTA_SUFFICES)
+				except:
+					msg = 'Warning: proteome %s does not have a valid FASTA suffix. Skipping ...' % proteome_file
+					sys.stderr.write(msg + '\n')
+					logObject.warning(msg)
+					continue 
+				
+				if sanity_check:
+					try:
+						assert (is_fasta(proteome_file))
+						with open(proteome_file) as of:
+							for rec in SeqIO.parse(of, 'fasta'):
+								combined_proteome_handle.write('>' + proteome_name + '|' + rec.id + '\n' + str(rec.seq) + '\n')
+						proteome_name_to_path[proteome_name] = proteome_file
+					except Exception as e:
+						msg = 'Warning: proteome %s is not a valid FASTA file. Skipping ...' % proteome_file
+						sys.stderr.write(msg + '\n')
+						logObject.warning(msg)
+						continue
+				else:
+					try:
+						with open(proteome_file) as of:
+							for rec in SeqIO.parse(of, 'fasta'):
+								combined_proteome_handle.write('>' + proteome_name + '|' + rec.id + '\n' + str(rec.seq) + '\n')			
+						proteome_name_to_path[proteome_name] = proteome_file
+					except Exception as e:
+						msg = 'Warning: unable to parse proteome %s. Skipping ...' % proteome_file
+						sys.stderr.write(msg + '\n')
+						logObject.warning(msg)
+						continue
+		elif os.path.isfile(p_path):
+			proteome_file = p_path
+			proteome_name = '.'.join(proteome_file.split('/')[-1].split('.')[:-1])
+			suffix = proteome_file.split('/')[-1].split('.')[-1].lower()
 			if proteome_file.endswith('.gz'):
-				suffix = proteome_file[:-3].split('.')[-1].lower()
+				proteome_name = '.'.join(proteome_file.split('/')[-1][:-3].split('.')[:-1])
+				suffix = proteome_file.split('/')[-1][:-3].split('.')[-1].lower()
+			
 			try:
 				assert (suffix in ACCEPTED_PROTEIN_FASTA_SUFFICES)
 			except:
-				msg = 'Warning: proteome %s does not have a valid FASTA suffix. Skipping ...' % f
+				msg = 'Warning: proteome %s does not have a valid FASTA suffix. Skipping ...' % proteome_file
 				sys.stderr.write(msg + '\n')
 				logObject.warning(msg)
+				continue 
 			
-			proteome_name = proteome_file.split('/')[-1].split('.')[0]
-			proteome_name_to_path[proteome_name] = proteome_file
 			if sanity_check:
 				try:
 					assert (is_fasta(proteome_file))
 					with open(proteome_file) as of:
 						for rec in SeqIO.parse(of, 'fasta'):
 							combined_proteome_handle.write('>' + proteome_name + '|' + rec.id + '\n' + str(rec.seq) + '\n')
-				except:
-					msg = 'Warning: proteome %s is not a valid FASTA file. Skipping ...' % f
+					proteome_name_to_path[proteome_name] = proteome_file
+				except Exception as e:
+					msg = 'Warning: proteome %s is not a valid FASTA file. Skipping ...' % proteome_file
 					sys.stderr.write(msg + '\n')
 					logObject.warning(msg)
+					continue
 			else:
-				with open(proteome_file) as of:
-					for rec in SeqIO.parse(of, 'fasta'):
-						combined_proteome_handle.write('>' + proteome_name + '|' + rec.id + '\n' + str(rec.seq) + '\n')			
-			msg = 'Warning: unable to validate proteome %s exists as a file. Skipping ...' % f
+				try:
+					with open(proteome_file) as of:
+						for rec in SeqIO.parse(of, 'fasta'):
+							combined_proteome_handle.write('>' + proteome_name + '|' + rec.id + '\n' + str(rec.seq) + '\n')			
+					proteome_name_to_path[proteome_name] = proteome_file
+				except Exception as e:
+					msg = 'Warning: unable to parse proteome %s. Skipping ...' % proteome_file
+					sys.stderr.write(msg + '\n')
+					logObject.warning(msg)
+					continue
+		else:
+			msg = 'Warning: unable to validate potential proteome %s exists as a file/directory. Skipping ...' % p
 			sys.stderr.write(msg + '\n')
 			logObject.info(msg)
+	combined_proteome_handle.close()
 	return proteome_name_to_path
 
 def processInputGenomes(genomes, genome_listing_file, logObject, sanity_check=False):
 	gf_listing_handle = open(genome_listing_file, 'a+')
-	for f in genomes:
-		if os.path.isfile(f):
-			genome_file = os.path.abspath(f)
-			suffix = genome_file.split('.')[-1].lower()
+	for g in genomes:
+		g_path = os.path.abspath(g)
+		if os.path.isdir(g_path):
+			for f in os.listdir(g_path):
+				genome_file = g_path + '/' + f
+				suffix = genome_file.split('/')[-1].split('.')[-1].lower()
+				if genome_file.endswith('.gz'):
+					suffix = genome_file.split('/')[-1][:-3].split('.')[-1].lower()
+				
+				try:
+					assert (suffix in ACCEPTED_FASTA_SUFFICES)
+				except:
+					msg = 'Warning: genome %s does not have a valid FASTA suffix. Skipping ...' % genome_file
+					sys.stderr.write(msg + '\n')
+					logObject.warning(msg)
+					continue
+
+				if sanity_check:
+					try:
+						assert (is_fasta(genome_file))
+						gf_listing_handle.write(genome_file + '\n')
+					except:
+						msg = 'Warning: genome %s is not a valid FASTA file. Skipping ...' % genome_file
+						sys.stderr.write(msg + '\n')
+						logObject.warning(msg)
+						continue
+				else:
+					gf_listing_handle.write(genome_file + '\n')
+		elif os.path.isfile(g_path):
+			genome_file = os.path.abspath(g_path)
+			suffix = genome_file.split('/')[-1].split('.')[-1].lower()
 			if genome_file.endswith('.gz'):
-				suffix = genome_file[:-3].split('.')[-1].lower()
+				suffix = genome_file.split('/')[-1][:-3].split('.')[-1].lower()
+			
 			try:
 				assert (suffix in ACCEPTED_FASTA_SUFFICES)
 			except:
-				msg = 'Warning: genome %s does not have a valid FASTA suffix. Skipping ...' % f
+				msg = 'Warning: genome %s does not have a valid FASTA suffix. Skipping ...' % genome_file
 				sys.stderr.write(msg + '\n')
 				logObject.warning(msg)
+				continue
 
 			if sanity_check:
 				try:
 					assert (is_fasta(genome_file))
 					gf_listing_handle.write(genome_file + '\n')
 				except:
-					msg = 'Warning: genome %s is not a valid FASTA file. Skipping ...' % f
+					msg = 'Warning: genome %s is not a valid FASTA file. Skipping ...' % genome_file
 					sys.stderr.write(msg + '\n')
 					logObject.warning(msg)
+					continue
 			else:
 				gf_listing_handle.write(genome_file + '\n')
 		else:
-			msg = 'Warning: unable to validate genome %s exists as a file. Skipping ...' % f
+			msg = 'Warning: unable to validate genome %s exists as a file. Skipping ...' % g
 			sys.stderr.write(msg + '\n')
 			logObject.info(msg)
 	gf_listing_handle.close()
@@ -451,7 +535,7 @@ def closeLoggerObject(logObject):
 		handler.close()
 		logObject.removeHandler(handler)
 
-def setupDirectories(directories):
+def setupDirectories(directories, automate=False):
 	"""
 	Description:
 	This is a generalizable function to create directories.
@@ -464,13 +548,16 @@ def setupDirectories(directories):
 		assert (type(directories) is list)
 		for d in directories:
 			if os.path.isdir(d):
-				response = input("The directory %s already exists, will delete and recreate, is this ok? (yes/no): " % d)
-				if response.lower() == 'yes':
+				if automate:
 					os.system('rm -fr %s' % d)
-				else:
-					msg = 'Deletion not requested! Exiting ...'
-					sys.stderr.write(msg + '\n')
-					sys.exit(1)
+				else:	
+					response = input("The directory %s already exists, will delete and recreate, is this ok? (yes/no): " % d)
+					if response.lower() == 'yes':
+						os.system('rm -fr %s' % d)
+					else:
+						msg = 'Deletion not requested! Exiting ...'
+						sys.stderr.write(msg + '\n')
+						sys.exit(1)
 			os.system('mkdir %s' % d)
 	except Exception as e:
 		sys.stderr.write(traceback.format_exc())
