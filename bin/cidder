@@ -110,6 +110,7 @@ def create_parser():
 	parser.add_argument('-ns', '--determine-clusters-skani', action='store_true', help="Perform secondary clustering to assign non-representative\ngenomes to their closest representative genomes based on skani-computed\nANI.", required=False, default=False)
 	parser.add_argument('-l', '--symlink', action='store_true', help="Symlink representative genomes in results subdirectory\ninstead of performing a copy of the files.", required=False, default=False)
 
+	parser.add_argument('-auto', '--automate', action='store_true', help="Automatically skip warnings and download genomes from NCBI if -t\nargument issued. Automatation off by default to prevent\nunexpected downloading of large genomes [Default\nis False].", required=False, default=False)
 	parser.add_argument('-c', '--threads', type=int, help="Number of threads/processes to use [Default is 1].", required=False, default=1)
 	parser.add_argument('-mm', '--max-memory', type=int, help="Max memory in Gigabytes [Default is 0 = unlimited].", required=False, default=0)
 	parser.add_argument('-v', '--version', action='store_true', help="Report version of CiDDER.", required=False, default=False)
@@ -143,6 +144,7 @@ def cidder_main():
 	determine_clusters_flag = myargs.determine_clusters
 	determine_clusters_ani_flag = myargs.determine_clusters_skani
 	filter_mge_flag = myargs.filter_mge
+	automate_flag = myargs.automate
 	genomad_database = myargs.genomad_database
 	require_similarity = myargs.require_similarity
 	max_memory = myargs.max_memory
@@ -165,7 +167,7 @@ def cidder_main():
 		sys.stderr.write("Output directory already exists!\n")
 		#sleep(5)
 
-	util.setupDirectories([outdir], automate_flag=True)
+	util.setupDirectories([outdir], automate_flag=automate_flag)
 
 	# Create logging object
 	log_file = outdir + 'Progress.log'

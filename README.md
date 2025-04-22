@@ -190,7 +190,7 @@ skder -h
 The help function should return the following:
 
 ```
-usage: skder [-h] [-g GENOMES [GENOMES ...]] [-t TAXA_NAME] -o OUTPUT_DIRECTORY [-d DEREPLICATION_MODE] [-i PERCENT_IDENTITY_CUTOFF] [-tc] [-f ALIGNED_FRACTION_CUTOFF] [-a MAX_AF_DISTANCE_CUTOFF]
+usage: skder [-h] [-g GENOMES [GENOMES ...]] [-t TAXA_NAME] -o OUTPUT_DIRECTORY [-d DEREPLICATION_MODE] [-i PERCENT_IDENTITY_CUTOFF] [-f ALIGNED_FRACTION_CUTOFF] [-a MAX_AF_DISTANCE_CUTOFF] [-tc]
              [-p SKANI_TRIANGLE_PARAMETERS] [-s] [-fm] [-gd GENOMAD_DATABASE] [-n] [-l] [-r GTDB_RELEASE] [-auto] [-mm MAX_MEMORY] [-c THREADS] [-v]
 
 	Program: skder
@@ -244,7 +244,6 @@ options:
                         [Default is "greedy"]
   -i PERCENT_IDENTITY_CUTOFF, --percent-identity-cutoff PERCENT_IDENTITY_CUTOFF
                         ANI cutoff for dereplication [Default is 99.5].
-  -tc, --test-cutoffs   Assess clustering using various pre-selected cutoffs.
   -f ALIGNED_FRACTION_CUTOFF, --aligned-fraction-cutoff ALIGNED_FRACTION_CUTOFF
                         Aligned cutoff threshold for dereplication - only needed by
                         one genome [Default is 50.0].
@@ -252,6 +251,7 @@ options:
                         Maximum difference for aligned fraction between a pair to
                         automatically disqualify the genome with a higher
                         AF from being a representative [Default is 10.0].
+  -tc, --test-cutoffs   Assess clustering using various pre-selected cutoffs.
   -p SKANI_TRIANGLE_PARAMETERS, --skani-triangle-parameters SKANI_TRIANGLE_PARAMETERS
                         Options for skani triangle. Note ANI and AF cutoffs
                         are specified separately and the -E parameter is always
@@ -297,7 +297,7 @@ The help function should return the following:
 
 ```
 usage: cidder [-h] [-g GENOMES [GENOMES ...]] [-p PROTEOMES [PROTEOMES ...]] [-t TAXA_NAME] [-a NEW_PROTEINS_NEEDED] [-ts TOTAL_SATURATION] [-mgs MULTI_GENOME_SATURATION] [-rs REQUIRE_SIMILARITY] -o
-              OUTPUT_DIRECTORY [-r GTDB_RELEASE] [-cdp CD_HIT_PARAMS] [-mg] [-e] [-s] [-fm] [-gd GENOMAD_DATABASE] [-n] [-ns] [-l] [-c THREADS] [-mm MAX_MEMORY] [-v]
+              OUTPUT_DIRECTORY [-r GTDB_RELEASE] [-cdp CD_HIT_PARAMS] [-mg] [-e] [-s] [-fm] [-gd GENOMAD_DATABASE] [-n] [-ns] [-l] [-auto] [-c THREADS] [-mm MAX_MEMORY] [-v]
 
 	Program: cidder
 	Author: Rauf Salamzade
@@ -396,6 +396,10 @@ options:
                         ANI.
   -l, --symlink         Symlink representative genomes in results subdirectory
                         instead of performing a copy of the files.
+  -auto, --automate     Automatically skip warnings and download genomes from NCBI if -t
+                        argument issued. Automatation off by default to prevent
+                        unexpected downloading of large genomes [Default
+                        is False].
   -c THREADS, --threads THREADS
                         Number of threads/processes to use [Default is 1].
   -mm MAX_MEMORY, --max-memory MAX_MEMORY
