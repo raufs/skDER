@@ -41,14 +41,14 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 import os
 import sys
 from time import sleep
+from skDER import util
 import argparse
-import pkg_resources
 import traceback
 import igraph as ig
 import matplotlib.pyplot as plt
 import random
 
-version = pkg_resources.require("skDER")[0].version
+version = util.get_version()
 
 VALID_METHODS = set(['phispy', 'genomad'])
 

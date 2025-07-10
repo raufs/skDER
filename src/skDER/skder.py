@@ -3,6 +3,7 @@ import sys
 import gzip
 import traceback
 from skDER import util
+from operator import itemgetter
 import subprocess
 from collections import defaultdict
 
@@ -63,6 +64,47 @@ def dynamicDerep(skani_result_file, concat_n50_result_file, skder_result_file, o
 				unproc_genome = mge_proc_to_unproc_mapping[line]
 				srf_handle.write(unproc_genome + "\n")
 		srf_handle.close()
+
+def lowMemGreedyDerep(all_genomes_listing_file, skder_lm_workspace, concat_n50_result_file, skder_result_file, outdir,
+				ani_cutoff, af_cutoff, logObject, mge_proc_to_unproc_mapping=None, threads=1):
+
+	# perform representative selection using a low-memory greedy method alternative
+	skder_sum_prog = 'skDERsum'
+	genome_summary_file = outdir + 'Genome_Information_for_Greedy_Clustering.txt'
+	
+	sketch_db_file = skder_lm_workspace + 'skani_sketch_all.db'
+	skder_sketch_cmd = ['skani', 'sketch', '-l', all_genomes_listing_file, '-o', sketch_db_file, '-t', str(threads)]
+	util.runCmd(skder_sketch_cmd, logObject, check_directories=[sketch_db_file])
+
+	n50_data = []
+	with open(concat_n50_result_file) as ocnrf:
+		for line in ocnrf:
+			line = line.strip()
+			genome, n50 = line.split('\t')
+			n50_data.append([genome, float(n50)])
+
+	skder_result_handle = open(skder_result_file, 'w')
+
+	accounted_genomes = set([])
+	for gn in sorted(n50_data, key=itemgetter(1), reverse=True):				
+		if gn[0] in accounted_genomes: continue
+		skani_search_result = skder_lm_workspace + 'current_search_results.tsv'
+		skani_search_cmd = ['skani', 'search', gn[0], '-d', sketch_db_file, '-o', skani_search_result, '-t', str(threads)]
+		util.runCmd(skani_search_cmd, logObject, check_files=[skani_search_result])
+
+		with open(skani_search_result) as ossr:
+			for i, line in enumerate(ossr):
+				if i == 0: continue
+				line = line.strip()
+				# Ref_file	Query_file	ANI	Align_fraction_query	Align_fraction_reference	Ref_name	Query_name
+				ref_file, query_file, ani, align_frac_query, align_frac_ref, ref_name, query_name = line.split('\t')
+				if float(ani) >= ani_cutoff and float(align_frac_ref) >= af_cutoff:
+					accounted_genomes.add(ref_file)
+		name = gn[0]
+		if mge_proc_to_unproc_mapping != None:
+			name = mge_proc_to_unproc_mapping[gn[0]]
+		skder_result_handle.write(name + '\n')
+	skder_result_handle.close()
 
 def greedyDerep(skani_result_file, concat_n50_result_file, skder_result_file, outdir,
 				ani_cutoff, af_cutoff, logObject, mge_proc_to_unproc_mapping=None, threads=1):

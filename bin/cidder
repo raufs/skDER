@@ -43,10 +43,9 @@ import sys
 from skDER import util, cidder
 from time import sleep
 import argparse
-import pkg_resources
 import traceback
 
-version = pkg_resources.require("skDER")[0].version
+version = util.get_version()
 
 VALID_GTDB_RELEASES = set(['R220', 'R226'])
 
@@ -98,8 +97,6 @@ def create_parser():
 	parser.add_argument('-mgs', '--multi-genome-saturation', type=float, help="The percentage of total multi-genome protein clusters needed to stop\nrepresentative genome selection [Default is 100.0].", required=False, default=100.0)
 	parser.add_argument('-rs', '--require-similarity', type=float, help="Require non-representative genomes to have X%% of their protein\nclusters represented by an individual representative genome [Default is 0.0].", required=False, default=0.0)
 	parser.add_argument('-o', '--output-directory', help='Output directory.', required=True)
-
-	parser.add_argument('-r', '--gtdb-release', help='Which GTDB release to use if -t argument issued [Default is R226].', default="R226")
 	parser.add_argument('-cdp', '--cd-hit-params', help="CD-HIT parameters to use for clustering proteins - select carefully\n(don't set threads or memory - those are done by default in cidder) and\nsurround by quotes [Default is: \"-n 5 -c 0.95 -aL 0.75 -aS 0.90\"]", required=False, default="-n 5 -c 0.95 -aL 0.75 -aS 0.90")
 	parser.add_argument('-mg', '--metagenome-mode', action='store_true', help="Run pyrodigal using metagenome mode.",  required=False, default=False)
 	parser.add_argument('-e', '--include-edge-orfs', action='store_true', help="Include proteins from ORFs that hang off the edge of a contig/scaffold.", required=False, default=False)
@@ -108,8 +105,9 @@ def create_parser():
 	parser.add_argument('-gd', '--genomad-database', help="If filter-mge is specified, it will by default use PhiSpy;\nhowever, if a database directory for\ngeNomad is provided - it will use that instead\nto predict MGEs.", default=None, required=False)
 	parser.add_argument('-n', '--determine-clusters', action='store_true', help="Perform secondary clustering to assign non-representative\ngenomes to their closest representative genomes based on shared\nprotein clusters.", required=False, default=False)
 	parser.add_argument('-ns', '--determine-clusters-skani', action='store_true', help="Perform secondary clustering to assign non-representative\ngenomes to their closest representative genomes based on skani-computed\nANI.", required=False, default=False)
+	parser.add_argument('-mn', '--minimal_n50', type=int, help="Minimal N50 of genomes to be included in dereplication\n[Default is 0].", required=False, default=0)
 	parser.add_argument('-l', '--symlink', action='store_true', help="Symlink representative genomes in results subdirectory\ninstead of performing a copy of the files.", required=False, default=False)
-
+	parser.add_argument('-r', '--gtdb-release', help='Which GTDB release to use if -t argument issued [Default is R226].', default="R226")
 	parser.add_argument('-auto', '--automate', action='store_true', help="Automatically skip warnings and download genomes from NCBI if -t\nargument issued. Automatation off by default to prevent\nunexpected downloading of large genomes [Default\nis False].", required=False, default=False)
 	parser.add_argument('-c', '--threads', type=int, help="Number of threads/processes to use [Default is 1].", required=False, default=1)
 	parser.add_argument('-mm', '--max-memory', type=int, help="Max memory in Gigabytes [Default is 0 = unlimited].", required=False, default=0)
@@ -148,6 +146,12 @@ def cidder_main():
 	genomad_database = myargs.genomad_database
 	require_similarity = myargs.require_similarity
 	max_memory = myargs.max_memory
+
+
+	minimal_n50 = myargs.minimal_n50
+	if minimal_n50 < 0:
+		sys.stderr.write('Minimal N50 requested is less than 0. Exiting ...\n')
+		sys.exit(1)
 
 	if genomad_database != None:
 		sys.stdout.write('Attempting to use geNomad to predict and cut out MGEs from genome assembly!\n')
@@ -238,12 +242,60 @@ def cidder_main():
 		sys.stdout.write(msg + '\n')
 		logObject.info(msg)
 		
+	# calculate N50s
+	n50s = None
+	try:
+		n50s = util.determineN50(all_genomes_listing_file, outdir, logObject, threads=threads)
+	except Exception as e:
+		msg = 'Error: issue determining N50s. Exiting ...'	
+		sys.stderr.write(msg + '\n')
+		logObject(msg)
+		sys.stderr.write(traceback.format_exc() + '\n')
+		logObject.error(traceback.format_exc())
+		sys.exit(1)
+
+	if minimal_n50 > 0:
+		msg = 'Filtering genomes with an N50 less than %d.' % minimal_n50
+		sys.stdout.write(msg + '\n')
+		logObject.info(msg)
+		number_of_genomes = 0 
+		try:
+			aglf_outf = open(all_genomes_listing_file, 'w')
+			n50s_filt = {}
+			for genome in n50s:
+				if n50s[genome] >= minimal_n50:
+					number_of_genomes += 1
+					aglf_outf.write(genome + '\n')
+					n50s_filt[genome] = n50s[genome]
+			aglf_outf.close()
+			n50s = n50s_filt
+			try:
+				if len(proteomes) == 0:
+					assert(number_of_genomes >= 2)
+			except Exception as e:
+				msg = 'Error: fewer than 2 genomes downloaded / provided / valid after filtering. Exiting ...'
+				logObject.error(msg)
+				sys.stderr.write(msg + '\n')
+				sys.stderr.write(traceback.format_exc() + '\n')
+				logObject.error(traceback.format_exc())
+				sys.exit(1)
+			else:
+				msg = 'Number of valid genomes provided as input after N50 filtering: %d' % number_of_genomes
+				sys.stdout.write(msg + '\n')
+				logObject.info(msg)
+		except Exception as e:
+			msg = 'Error: issue filtering genomes by N50. Exiting ...'
+			sys.stderr.write(msg + '\n')
+			logObject.error(msg)
+			sys.stderr.write(traceback.format_exc() + '\n')
+			logObject.error(traceback.format_exc())
+			sys.exit(1)
+
 	# filter genomes for MGEs if requested
-	mge_proc_to_unproc_mapping = None
 	if number_of_genomes > 0 and filter_mge_flag:
 		proc_genomes_listing_file = outdir + 'All_Genomes_Listing_mgecut_Processed.txt'
 		try:
-			mge_proc_to_unproc_mapping, _ = util.filterMGEs(all_genomes_listing_file, outdir, proc_genomes_listing_file, logObject, threads=threads, genomad_database=genomad_database)
+			_, _ = util.filterMGEs(all_genomes_listing_file, outdir, proc_genomes_listing_file, logObject, threads=threads, genomad_database=genomad_database)
 		except Exception as e:
 			msg = 'Error: issue filtering MGEs. Exiting ...'
 			sys.stderr.write(msg + '\n')
@@ -326,7 +378,7 @@ def cidder_main():
 			rep_genomes = cidder.appendAdditionalReps(rep_genomes, genome_protein_clusters, require_similarity, 
 											          rep_appending_order_file, genome_name_to_path, 
 													  proteome_name_to_path, cidder_drep_dir, logObject, 
-													  symlink_flag=False)
+													  symlink_flag=symlink_flag)
 		except Exception as e:
 			msg = 'Error: issues with appending additional representative genomes based on required similarity between non-representative genomes to individual representative genomes. Exiting ...'
 			sys.stderr.write(msg + '\n')

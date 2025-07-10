@@ -43,13 +43,12 @@ import sys
 from skDER import util, skder
 from time import sleep
 import argparse
-import pkg_resources
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import traceback
 
-version = pkg_resources.require("skDER")[0].version
+version = util.get_version() 
 
 VALID_GTDB_RELEASES = set(['R220', 'R226'])
 PRESELECTED_ANI_CUTOFFS = [90.0, 95.0, 97.0, 98.0, 99.0, 99.5]
@@ -86,14 +85,14 @@ def create_parser():
 
 	and
     
-	skDER & CiDDER: microbial genome dereplication approaches for comparative genomic 
-	and metagenomic applications. Salamzade, Kottapalli, and Kalan, 2025.
+	skDER & CiDDER: two scalable approaches for microbial dereplication. Microbial
+	Genomics. Salamzade, Kottapalli, and Kalan, 2025.
     """, formatter_class=argparse.RawTextHelpFormatter)
 
 	parser.add_argument('-g', '--genomes', nargs='+', help='Genome assembly file paths or paths to containing\ndirectories. Files should be in FASTA format and can be gzipped\n(accepted suffices are: *.fasta,\n*.fa, *.fas, or *.fna) [Optional].', required=False, default=[])
 	parser.add_argument('-t', '--taxa-name', help='Genus or species identifier from GTDB for which to\ndownload genomes for and include in\ndereplication analysis [Optional].', required=False, default=None)
 	parser.add_argument('-o', '--output-directory', help='Output directory.', required=True)
-	parser.add_argument('-d', '--dereplication-mode', help='Whether to use a "dynamic" (more concise) or "greedy" (more\ncomprehensive) approach to selecting representative genomes.\n[Default is "greedy"]', required=False, default="greedy")
+	parser.add_argument('-d', '--dereplication-mode', help='Whether to use a "dynamic" (more concise), "greedy" (more\ncomprehensive), or "low_mem_greedy" approach to selecting\nrepresentative genomes. [Default is "greedy"]', required=False, default="greedy")
 	parser.add_argument('-i', '--percent-identity-cutoff', type=float, help="ANI cutoff for dereplication [Default is 99.5].", required=False, default=99.5)
 	parser.add_argument('-f', '--aligned-fraction-cutoff', type=float, help="Aligned cutoff threshold for dereplication - only needed by\none genome [Default is 50.0].", required=False, default=50.0)
 	parser.add_argument('-a', '--max-af-distance-cutoff', type=float, help="Maximum difference for aligned fraction between a pair to\nautomatically disqualify the genome with a higher\nAF from being a representative [Default is 10.0].", required=False, default=10.0)
@@ -103,6 +102,7 @@ def create_parser():
 	parser.add_argument('-fm', '--filter-mge', action='store_true', help="Filter predicted MGE coordinates along genomes before\ndereplication assessment but after N50\ncomputation.", required=False, default=False)
 	parser.add_argument('-gd', '--genomad-database', help="If filter-mge is specified, it will by default use PhiSpy;\nhowever, if a database directory for\ngeNomad is provided - it will use that instead\nto predict MGEs.", default=None, required=False)
 	parser.add_argument('-n', '--determine-clusters', action='store_true', help="Perform secondary clustering to assign non-representative\ngenomes to their closest representative genomes.", required=False, default=False)
+	parser.add_argument('-mn', '--minimal_n50', type=int, help="Minimal N50 of genomes to be included in dereplication\n[Default is 0].", required=False, default=0)
 	parser.add_argument('-l', '--symlink', action='store_true', help="Symlink representative genomes in results subdirectory\ninstead of performing a copy of the files.", required=False, default=False)
 	parser.add_argument('-r', '--gtdb-release', help='Which GTDB release to use if -t argument issued [Default is R226].', default="R226")
 	parser.add_argument('-auto', '--automate', action='store_true', help="Automatically skip warnings and download genomes from NCBI if -t\nargument issued. Automatation off by default to prevent\nunexpected downloading of large genomes [Default\nis False].", required=False, default=False)
@@ -135,11 +135,16 @@ def skder_main():
 	threads = myargs.threads
 	symlink_flag = myargs.symlink
 	determine_clusters_flag = myargs.determine_clusters
+	minimal_n50 = myargs.minimal_n50
 	sanity_check_flag = myargs.sanity_check
 	filter_mge_flag = myargs.filter_mge
 	automate_flag = myargs.automate
 	genomad_database = myargs.genomad_database
 	max_memory = myargs.max_memory
+
+	if minimal_n50 < 0:
+		sys.stderr.write('Minimal N50 requested is less than 0. Exiting ...\n')
+		sys.exit(1)
 
 	if genomad_database != None:
 		sys.stdout.write('Attempting to use geNomad to predict and cut out MGEs from genome assembly!\n')
@@ -150,7 +155,7 @@ def skder_main():
 			sys.exit(1)
 
 	try:
-		assert(selection_mode in set(['dynamic', 'greedy']))
+		assert(selection_mode in set(['dynamic', 'greedy', 'low_mem_greedy']))
 	except:
 		sys.stderr.write('Selection mode requested not valid, must be either "greedy" or  "dynamic".')
 		sys.exit(1)
@@ -261,6 +266,42 @@ def skder_main():
 		logObject.error(traceback.format_exc())
 		sys.exit(1)
 		
+	if minimal_n50 > 0:
+		msg = 'Filtering genomes with an N50 less than %d.' % minimal_n50
+		sys.stdout.write(msg + '\n')
+		logObject.info(msg)
+		number_of_genomes = 0 
+		try:
+			aglf_outf = open(all_genomes_listing_file, 'w')
+			n50s_filt = {}
+			for genome in n50s:
+				if n50s[genome] >= minimal_n50:
+					number_of_genomes += 1
+					aglf_outf.write(genome + '\n')
+					n50s_filt[genome] = n50s[genome]
+			aglf_outf.close()
+			n50s = n50s_filt
+			try:
+				assert(number_of_genomes >= 2)
+			except Exception as e:
+				msg = 'Error: fewer than 2 genomes downloaded / provided / valid after filtering. Exiting ...'
+				logObject.error(msg)
+				sys.stderr.write(msg + '\n')
+				sys.stderr.write(traceback.format_exc() + '\n')
+				logObject.error(traceback.format_exc())
+				sys.exit(1)
+			else:
+				msg = 'Number of valid genomes provided as input after N50 filtering: %d' % number_of_genomes
+				sys.stdout.write(msg + '\n')
+				logObject.info(msg)
+		except Exception as e:
+			msg = 'Error: issue filtering genomes by N50. Exiting ...'
+			sys.stderr.write(msg + '\n')
+			logObject.error(msg)
+			sys.stderr.write(traceback.format_exc() + '\n')
+			logObject.error(traceback.format_exc())
+			sys.exit(1)
+
 	# filter genomes for MGEs if requested
 	mge_proc_to_unproc_mapping = None
 	mge_unproc_to_proc_mapping = None
@@ -278,13 +319,14 @@ def skder_main():
 		all_genomes_listing_file = proc_genomes_listing_file
 
 	# create N50 file with names matching file paths
-	concat_n50_result_file = outdir + 'Concatenated_N50.txt'	
+	concat_n50_result_file = outdir + 'Concatenated_N50.txt'
 	util.writeN50sToFile(n50s, all_genomes_listing_file, concat_n50_result_file, logObject)
 
 	# run skani triangle
 	skani_result_file = outdir + 'Skani_Triangle_Edge_Output.txt'
-	skder.runSkani(all_genomes_listing_file, skani_result_file, skani_triangle_parameters, 
-			 aligned_fraction_cutoff, selection_mode, test_cutoffs_flag, logObject, threads=threads)
+	if selection_mode == 'greedy' or selection_mode == 'dynamic':
+		skder.runSkani(all_genomes_listing_file, skani_result_file, skani_triangle_parameters, 
+			       	 aligned_fraction_cutoff, selection_mode, test_cutoffs_flag, logObject, threads=threads)
 
 	if test_cutoffs_flag:
 		skder_result_dir = outdir + 'skDER_Result/'
@@ -321,6 +363,21 @@ def skder_main():
 						sys.stderr.write(traceback.format_exc() + '\n')
 						logObject.error(traceback.format_exc())
 						sys.exit(1)	
+
+				elif selection_mode == 'low_mem_greedy':
+					try:
+						skder_lm_workspace = outdir + 'skDER_iterative_greedy_workspace/'
+						util.setupDirectories([skder_lm_workspace])
+						skder.lowMemGreedyDerep(all_genomes_listing_file, skder_lm_workspace, concat_n50_result_file, skder_result_file, 
+							  					outdir, ani_cutoff, af_cutoff, logObject, mge_proc_to_unproc_mapping=mge_proc_to_unproc_mapping, threads=threads)
+					except Exception as e:
+						msg = 'Error: issue running skDER low memory greedy method while testing parameters. Exiting ...'
+						sys.stderr.write(msg + '\n')
+						logObject.error(msg)
+						sys.stderr.write(traceback.format_exc() + '\n')
+						logObject.error(traceback.format_exc())
+						sys.exit(1)
+
 				rep_genome_count = 0 
 				with open(skder_result_file) as osrf:
 					for line in osrf:
@@ -374,6 +431,20 @@ def skder_main():
 				sys.stderr.write(traceback.format_exc() + '\n')
 				logObject.error(traceback.format_exc())
 				sys.exit(1)
+
+		elif selection_mode == 'low_mem_greedy':
+			try:
+				skder_lm_workspace = outdir + 'skDER_iterative_greedy_workspace/'
+				util.setupDirectories([skder_lm_workspace])
+				skder.lowMemGreedyDerep(all_genomes_listing_file, skder_lm_workspace, concat_n50_result_file, skder_result_file, outdir,
+										specified_ani_cutoff, specified_af_cutoff, logObject, mge_proc_to_unproc_mapping=mge_proc_to_unproc_mapping, threads=threads)
+			except Exception as e:
+				msg = 'Error: issue running skDER low memory greedy method while testing parameters. Exiting ...'
+				sys.stderr.write(msg + '\n')
+				logObject.error(msg)
+				sys.stderr.write(traceback.format_exc() + '\n')
+				logObject.error(traceback.format_exc())
+				sys.exit(1)	
 
 		try:
 			util.copyRepresentativeGenomesToDirectory(skder_result_file, outdir, logObject, symlink_flag=symlink_flag)

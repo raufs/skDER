@@ -43,10 +43,9 @@ import sys
 from skDER import util
 from time import sleep
 import argparse
-import pkg_resources
 import traceback
 
-version = pkg_resources.require("skDER")[0].version
+version = util.get_version()
 
 VALID_METHODS = set(['phispy', 'genomad'])
 

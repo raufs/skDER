@@ -15,9 +15,19 @@ import multiprocessing
 import shutil
 import tqdm
 import resource
+import gzip
+import importlib.metadata
 
 ACCEPTED_FASTA_SUFFICES = set(['fasta', 'fas', 'fna', 'fa'])
 ACCEPTED_PROTEIN_FASTA_SUFFICES = set(['fasta', 'faa', 'fa'])
+
+def get_version():
+	try:
+		package_name = "skDER"
+		package_version = str(importlib.metadata.version(package_name))
+	except importlib.metadata.PackageNotFoundError:
+		package_version = "NA"
+	return package_version
 
 def memory_limit(mem):
 	"""
@@ -34,39 +44,44 @@ def memory_limit(mem):
 	print(resource.getrlimit(resource.RLIMIT_AS))
 
 def _download_files(urls, resdir):
-	"""
-	Download files from the given URLs and save them to the specified directory.
-	Note, this function was taken from: 
-	https://gist.github.com/darwing1210/c9ff8e3af8ba832e38e6e6e347d9047a
-	********************************************************************
-	Parameters:
-	- urls: List of URLs to download.	
-	- resdir: Directory to save the downloaded files.
-	********************************************************************
-	"""
-	os.makedirs(resdir, exist_ok=True)
-	sema = asyncio.BoundedSemaphore(5)
+    """
+    Download files from the given URLs and save them to the specified directory.
+    Note, this function was taken from:
+    https://gist.github.com/darwing1210/c9ff8e3af8ba832e38e6e6e347d9047a
+    ********************************************************************
+    Parameters:
+    - urls: List of URLs to download.
+    - resdir: Directory to save the downloaded files.
+    ********************************************************************
+    """
+    os.makedirs(resdir, exist_ok=True)
+    sema = asyncio.BoundedSemaphore(5)
 
-	async def fetch_file(session, url):
-		fname = url.split("/")[-1]
-		async with sema:
-			async with session.get(url) as resp:
-				assert resp.status == 200
-				data = await resp.read()
+    async def fetch_file(session, url):
+        fname = url.split("/")[-1]
+        try:
+            async with sema:
+                async with session.get(url) as resp:
+                    try:
+                        assert resp.status == 200
+                    except:
+                        sys.stderr.write('Issue downloading %s\n' % url)
+                    data = await resp.read()
 
-		async with aiofile.async_open(
-			os.path.join(resdir, fname), "wb"
-		) as outfile:
-			await outfile.write(data)
+            async with aiofile.async_open(
+                os.path.join(resdir, fname), "wb"
+            ) as outfile:
+                await outfile.write(data)
+        except Exception as e:
+            sys.stderr.write('Issue downloading %s\n' % url)
+    async def main():
+        async with aiohttp.ClientSession() as session:
+            tasks = [fetch_file(session, url) for url in urls]
+            await asyncio.gather(*tasks)
 
-	async def main():
-		async with aiohttp.ClientSession() as session:
-			tasks = [fetch_file(session, url) for url in urls]
-			await asyncio.gather(*tasks)
-
-	loop = asyncio.get_event_loop()
-	loop.run_until_complete(main())
-	loop.close()
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
+    loop.close()
 
 def downloadGTDBGenomes(taxa_name, gtdb_release, outdir, genome_listing_file, logObject, sanity_check=False, automated_download=False, gunzip=False, threads=1):
 	"""
@@ -136,7 +151,7 @@ def downloadGTDBGenomes(taxa_name, gtdb_release, outdir, genome_listing_file, lo
 	else:
 		if not automated_download:
 			try:
-				response = input("Will be downloading %d genomes for the taxon %s. Note, each\ngenome in compressed FASTA formatting is approximately 1-2 MB.\nIf downloading thousands of genomes, this can lead to significant disk space being\nused. Do you wish to continue? (yes/no): " % (genome_count, taxa_name))
+				response = input("Will be downloading %d genomes for the taxon %s. Note, each\ngenome in compressed FASTA formatting is typically 1-4 MB.\nIf downloading thousands of genomes, this can lead to significant disk space being\nused. Do you wish to continue? (yes/no): " % (genome_count, taxa_name))
 				if response.lower() != 'yes':
 					os.system('User does NOT want to download genomes for taxa from NCBI. Exiting ...')
 					sys.exit(1)
@@ -161,6 +176,15 @@ def downloadGTDBGenomes(taxa_name, gtdb_release, outdir, genome_listing_file, lo
 		for f in os.listdir(genomes_directory):
 			genome_file = genomes_directory + f
 			if not os.path.isfile(genome_file): continue
+			with gzip.open(genome_file, 'r') as fh:
+				try:
+					fh.read(1)
+				except gzip.BadGzipFile:
+					msg = 'Warning: genome %s, file with .gz suffix does not actually appear to be gzipped, skipping.' % genome_file
+					logObject.warning(msg)
+					sys.stderr.write(msg + '\n')
+					os.remove(genome_file)
+					continue
 			if sanity_check:
 				try:
 					assert (is_fasta(genome_file))
