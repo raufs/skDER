@@ -254,8 +254,9 @@ options:
                         Output directory.
   -d DEREPLICATION_MODE, --dereplication-mode DEREPLICATION_MODE
                         Whether to use a "dynamic" (more concise), "greedy" (more
-                        comprehensive), or "low_mem_greedy" approach to selecting
-                        representative genomes. [Default is "greedy"]
+                        comprehensive), or "low_mem_greedy" (currently
+                        experimental) approach to selecting representative genomes.
+                        [Default is "greedy"]
   -i PERCENT_IDENTITY_CUTOFF, --percent-identity-cutoff PERCENT_IDENTITY_CUTOFF
                         ANI cutoff for dereplication [Default is 99.5].
   -f ALIGNED_FRACTION_CUTOFF, --aligned-fraction-cutoff ALIGNED_FRACTION_CUTOFF
