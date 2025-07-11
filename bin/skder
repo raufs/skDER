@@ -325,7 +325,7 @@ def skder_main():
 	# run skani triangle
 	skani_result_file = outdir + 'Skani_Triangle_Edge_Output.txt'
 	if selection_mode == 'greedy' or selection_mode == 'dynamic':
-		skder.runSkani(all_genomes_listing_file, skani_result_file, skani_triangle_parameters, 
+		skder.runSkaniTriangle(all_genomes_listing_file, skani_result_file, skani_triangle_parameters, 
 			       	 aligned_fraction_cutoff, selection_mode, test_cutoffs_flag, logObject, threads=threads)
 
 	if test_cutoffs_flag:
@@ -367,9 +367,10 @@ def skder_main():
 				elif selection_mode == 'low_mem_greedy':
 					try:
 						skder_lm_workspace = outdir + 'skDER_iterative_greedy_workspace/'
-						util.setupDirectories([skder_lm_workspace])
+						util.setupDirectories([skder_lm_workspace], automate_flag=True)
 						skder.lowMemGreedyDerep(all_genomes_listing_file, skder_lm_workspace, concat_n50_result_file, skder_result_file, 
-							  					outdir, ani_cutoff, af_cutoff, logObject, mge_proc_to_unproc_mapping=mge_proc_to_unproc_mapping, threads=threads)
+												outdir, ani_cutoff, af_cutoff, logObject, mge_proc_to_unproc_mapping=mge_proc_to_unproc_mapping, 
+												threads=threads)
 					except Exception as e:
 						msg = 'Error: issue running skDER low memory greedy method while testing parameters. Exiting ...'
 						sys.stderr.write(msg + '\n')
@@ -461,6 +462,14 @@ def skder_main():
 		if determine_clusters_flag:
 			skder_cluster_result_file = outdir + 'skDER_Clustering.txt'
 			try:
+				if selection_mode == 'low_mem_greedy':
+					cluster_dir = outdir + 'skani_dist_Workspace/'
+					util.setupDirectories([cluster_dir])
+					skani_result_file = 'Skani_Dist_Output.txt'
+					skder.runSkaniDist(cluster_dir, skder_result_file, all_genomes_listing_file, skani_result_file, 
+									   skani_triangle_parameters, aligned_fraction_cutoff, selection_mode, test_cutoffs_flag, 
+									   logObject, threads=threads)
+
 				skder.determineClusters(skder_result_file, skani_result_file, mge_unproc_to_proc_mapping,
 										mge_proc_to_unproc_mapping, skder_cluster_result_file, specified_af_cutoff,
 						  				specified_ani_cutoff)

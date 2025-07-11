@@ -164,7 +164,8 @@ Here is an overview of this alternate approach:
 
 ### Using the Low-Memory Greedy Dereplication Approach (skDER)
 
-Starting from v1.3.3, skDER also allows users to request `low_mem_greedy` clustering instead. This generally leads to a larger, more-comprehensive selection of representative genomes that covers more of the pan-genome.  
+Starting from v1.3.3, skDER also allows users to request `low_mem_greedy` clustering instead. This generally leads to a larger, more-comprehensive selection of representative genomes that covers more of the pan-genome. Note, if a secondary clustering is 
+envoked this will end up running 
 
 Here is an overview of this alternate approach:
 

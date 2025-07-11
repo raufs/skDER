@@ -7,18 +7,10 @@ from operator import itemgetter
 import subprocess
 from collections import defaultdict
 
-def runSkani(genome_listing_file, skani_result_file, skani_triangle_parameters, 
+def runSkaniTriangle(genome_listing_file, skani_result_file, skani_triangle_parameters, 
 			 aligned_fraction_cutoff, selection_mode, test_cutoffs_flag, logObject, threads=1):	
 	"""
-	Run skani triangle command to find the best ANI cutoffs for the genomes.
-		:param genome_listing_file: File containing the list of genomes.
-		:param skani_result_file: File to save the results.
-		:param skani_triangle_parameters: Parameters for skani triangle command.
-		:param aligned_fraction_cutoff: Cutoff for aligned fraction.
-		:param selection_mode: Mode for selecting genomes.
-		:param test_cutoffs_flag: Flag to test cutoffs.
-		:param logObject: Logger object for logging messages.
-		:param threads: Number of threads to use for skani command.
+	Run skani triangle
 	"""
 	try:
 		skani_triangle_cmd = ['skani', 'triangle', '-l', genome_listing_file, 
@@ -33,7 +25,42 @@ def runSkani(genome_listing_file, skani_result_file, skani_triangle_parameters,
 								'-t', str(threads), '-o', skani_result_file]
 		util.runCmd(skani_triangle_cmd, logObject, check_files=[skani_result_file])
 	except Exception as e:
-		raise RuntimeError('Error running skani triangle command: %s' % str(e))	
+		raise RuntimeError('Error running skani triangle command: %s' % ' '.join(skani_triangle_cmd))
+
+def runSkaniDist(cluster_dir, skder_result_file, genome_listing_file, skani_result_file, skani_dist_parameters, 
+			 aligned_fraction_cutoff, selection_mode, test_cutoffs_flag, logObject, threads=1):	
+	"""
+	Run skani dist (using same parameters as triangle - since this only gets invoked for low_mem_greedy)
+	"""
+	try:
+		rep_file_names = set([])
+		with open(skder_result_file) as orf:
+			for line in orf:
+				line = line.strip()
+				rep_file_names.add(line.split('/')[-1])
+
+		rep_listing_file = cluster_dir + 'Reps_Listing.txt'
+		nonrep_listing_file = cluster_dir + 'NonReps_Listing.txt'
+
+		rlf = open(rep_listing_file, 'w')
+		nlf = open(nonrep_listing_file, 'w')
+		with open(genome_listing_file) as oglf:
+			for line in oglf:
+				line = line.strip()
+				base_name = line.split('/')[-1]
+				if base_name in rep_file_names:
+					rlf.write(line + '\n')
+				else:
+					nlf.write(line + '\n')
+		rlf.close()
+		nlf.close()
+
+		skani_dist_cmd = ['skani', 'dist', '--rl', rep_listing_file, '--ql', nonrep_listing_file, 
+					      skani_dist_parameters, '-o', skani_result_file]
+
+		util.runCmd(skani_dist_cmd, logObject, check_files=[skani_result_file])
+	except Exception as e:
+		raise RuntimeError('Error running skani dist command: %s' % ' '.join(skani_dist_cmd))	
 
 def dynamicDerep(skani_result_file, concat_n50_result_file, skder_result_file, outdir,
 				 ani_cutoff, af_cutoff, max_af_dist, logObject, mge_proc_to_unproc_mapping=None):
