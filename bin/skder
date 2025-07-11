@@ -92,7 +92,7 @@ def create_parser():
 	parser.add_argument('-g', '--genomes', nargs='+', help='Genome assembly file paths or paths to containing\ndirectories. Files should be in FASTA format and can be gzipped\n(accepted suffices are: *.fasta,\n*.fa, *.fas, or *.fna) [Optional].', required=False, default=[])
 	parser.add_argument('-t', '--taxa-name', help='Genus or species identifier from GTDB for which to\ndownload genomes for and include in\ndereplication analysis [Optional].', required=False, default=None)
 	parser.add_argument('-o', '--output-directory', help='Output directory.', required=True)
-	parser.add_argument('-d', '--dereplication-mode', help='Whether to use a "dynamic" (more concise), "greedy" (more\ncomprehensive), or "low_mem_greedy" approach to selecting\nrepresentative genomes. [Default is "greedy"]', required=False, default="greedy")
+	parser.add_argument('-d', '--dereplication-mode', help='Whether to use a "dynamic" (more concise), "greedy" (more\ncomprehensive), or "low_mem_greedy" (currently\nexperimental) approach to selecting representative genomes.\n[Default is "greedy"]', required=False, default="greedy")
 	parser.add_argument('-i', '--percent-identity-cutoff', type=float, help="ANI cutoff for dereplication [Default is 99.5].", required=False, default=99.5)
 	parser.add_argument('-f', '--aligned-fraction-cutoff', type=float, help="Aligned cutoff threshold for dereplication - only needed by\none genome [Default is 50.0].", required=False, default=50.0)
 	parser.add_argument('-a', '--max-af-distance-cutoff', type=float, help="Maximum difference for aligned fraction between a pair to\nautomatically disqualify the genome with a higher\nAF from being a representative [Default is 10.0].", required=False, default=10.0)
