@@ -1,0 +1,1 @@
+/Users/raufs/Coding/skder/develop_v_1.3.3/conda_env/bin/skder -t Cutibacterium granulosum -o skder_gtdb_results/ -c 4 -auto -s -tc

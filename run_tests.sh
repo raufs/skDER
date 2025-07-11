@@ -14,4 +14,4 @@ skder -t "Cutibacterium granulosum" -o skder_gtdb_results/ -c 4 -auto -s -tc
 
 printf "\n##############################################\n\n"
 
-cidder -g Cutibacterium_granulosum_Genomes_in_GTDB_R214/*.fna -o cidder_results/ -c 4 -s
+cidder -g Cutibacterium_granulosum_Genomes_in_GTDB_R214/*.fna -o cidder_results/ -c 4 -n -ns

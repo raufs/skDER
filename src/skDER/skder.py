@@ -25,7 +25,7 @@ def runSkaniTriangle(genome_listing_file, skani_result_file, skani_triangle_para
 								'-t', str(threads), '-o', skani_result_file]
 		util.runCmd(skani_triangle_cmd, logObject, check_files=[skani_result_file])
 	except Exception as e:
-		raise RuntimeError('Error running skani triangle command: %s' % ' '.join(skani_triangle_cmd))
+		raise RuntimeError('Error running skani triangle command: %s' % e)
 
 def runSkaniDist(cluster_dir, skder_result_file, genome_listing_file, skani_result_file, skani_dist_parameters, 
 			 aligned_fraction_cutoff, selection_mode, test_cutoffs_flag, logObject, threads=1):	
@@ -60,7 +60,7 @@ def runSkaniDist(cluster_dir, skder_result_file, genome_listing_file, skani_resu
 
 		util.runCmd(skani_dist_cmd, logObject, check_files=[skani_result_file])
 	except Exception as e:
-		raise RuntimeError('Error running skani dist command: %s' % ' '.join(skani_dist_cmd))	
+		raise RuntimeError('Error running skani dist command: %s' % e)	
 
 def dynamicDerep(skani_result_file, concat_n50_result_file, skder_result_file, outdir,
 				 ani_cutoff, af_cutoff, max_af_dist, logObject, mge_proc_to_unproc_mapping=None):

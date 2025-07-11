@@ -1,0 +1,7 @@
+/Users/raufs/Coding/skder/develop_v_1.3.3/skDER/test_case/skder_gtdb_results/gtdb_ncbi_genomes/Cutibacterium_granulosum_GCA_030295285.1.fasta.gz
+/Users/raufs/Coding/skder/develop_v_1.3.3/skDER/test_case/skder_gtdb_results/gtdb_ncbi_genomes/Cutibacterium_granulosum_GCA_900186975.1.fasta.gz
+/Users/raufs/Coding/skder/develop_v_1.3.3/skDER/test_case/skder_gtdb_results/gtdb_ncbi_genomes/Cutibacterium_granulosum_GCA_032474995.1.fasta.gz
+/Users/raufs/Coding/skder/develop_v_1.3.3/skDER/test_case/skder_gtdb_results/gtdb_ncbi_genomes/Cutibacterium_granulosum_GCA_034952465.1.fasta.gz
+/Users/raufs/Coding/skder/develop_v_1.3.3/skDER/test_case/skder_gtdb_results/gtdb_ncbi_genomes/Cutibacterium_granulosum_GCA_943912955.1.fasta.gz
+/Users/raufs/Coding/skder/develop_v_1.3.3/skDER/test_case/skder_gtdb_results/gtdb_ncbi_genomes/Cutibacterium_granulosum_GCA_030826365.1.fasta.gz
+/Users/raufs/Coding/skder/develop_v_1.3.3/skDER/test_case/skder_gtdb_results/gtdb_ncbi_genomes/Cutibacterium_granulosum_GCA_034952925.1.fasta.gz

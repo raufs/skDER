@@ -413,10 +413,13 @@ def cidder_main():
 		sys.stdout.write(msg + '\n')
 		logObject.info(msg)
 
-		skani_result_file = outdir + 'Skani_Triangle_Edge_Output.txt'
+		cluster_dir = outdir + 'skani_for_Clustering_Workspace/'
+		util.setupDirectories([cluster_dir])
+		skani_result_file = cluster_dir + 'Skani_Dist_Output.txt'
 		cidder_cluster_result_file = outdir + 'CiDDER_skani_Clustering.txt'
 		try:
-			cidder.secondaryClusteringSkani(all_genomes_listing_file, rep_genomes, genome_protein_clusters, skani_result_file, 
+			cidder.secondaryClusteringSkani(cluster_dir, all_genomes_listing_file, rep_genomes, 
+								            genome_protein_clusters, skani_result_file, 
 								            cidder_cluster_result_file, logObject, threads=threads)
 		except:
 			msg = 'Error: issues with secondary clustering based on skani. Exiting ...'

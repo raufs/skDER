@@ -1,0 +1,3 @@
+/Users/raufs/Coding/skder/develop_v_1.3.3/skDER/test_case/Cutibacterium_granulosum_Genomes_in_GTDB_R214/GCA_000464495.1_TM11_assembly2012_genomic.fna
+/Users/raufs/Coding/skder/develop_v_1.3.3/skDER/test_case/Cutibacterium_granulosum_Genomes_in_GTDB_R214/GCA_001700755.2_ASM170075v2_genomic.fna
+/Users/raufs/Coding/skder/develop_v_1.3.3/skDER/test_case/Cutibacterium_granulosum_Genomes_in_GTDB_R214/GCA_900186975.1_50569_F01_genomic.fna

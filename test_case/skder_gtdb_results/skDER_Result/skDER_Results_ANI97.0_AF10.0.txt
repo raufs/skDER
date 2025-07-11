@@ -1,0 +1,2 @@
+/Users/raufs/Coding/skder/develop_v_1.3.3/skDER/test_case/skder_gtdb_results/gtdb_ncbi_genomes/Cutibacterium_granulosum_GCA_900186975.1.fasta.gz
+/Users/raufs/Coding/skder/develop_v_1.3.3/skDER/test_case/skder_gtdb_results/gtdb_ncbi_genomes/Cutibacterium_granulosum_GCA_034952755.1.fasta.gz

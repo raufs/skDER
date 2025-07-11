@@ -1,0 +1,1 @@
+/Users/raufs/Coding/skder/develop_v_1.3.3/conda_env/bin/skder -g Cutibacterium_granulosum_Genomes_in_GTDB_R214/ -o skder_results/ -c 4 -n -i 99.0

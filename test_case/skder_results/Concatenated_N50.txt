@@ -1,0 +1,7 @@
+/Users/raufs/Coding/skder/develop_v_1.3.3/skDER/test_case/Cutibacterium_granulosum_Genomes_in_GTDB_R214/GCA_000464495.1_TM11_assembly2012_genomic.fna	53576
+/Users/raufs/Coding/skder/develop_v_1.3.3/skDER/test_case/Cutibacterium_granulosum_Genomes_in_GTDB_R214/GCA_943912955.1_in4FWvFvrJ_bin.3.MAG_genomic.fna	197981
+/Users/raufs/Coding/skder/develop_v_1.3.3/skDER/test_case/Cutibacterium_granulosum_Genomes_in_GTDB_R214/GCA_018366805.1_ASM1836680v1_genomic.fna	8321
+/Users/raufs/Coding/skder/develop_v_1.3.3/skDER/test_case/Cutibacterium_granulosum_Genomes_in_GTDB_R214/GCA_000477715.1_Prop_sp_KPL1844_V1_genomic.fna	1405158
+/Users/raufs/Coding/skder/develop_v_1.3.3/skDER/test_case/Cutibacterium_granulosum_Genomes_in_GTDB_R214/GCA_001700755.2_ASM170075v2_genomic.fna	95306
+/Users/raufs/Coding/skder/develop_v_1.3.3/skDER/test_case/Cutibacterium_granulosum_Genomes_in_GTDB_R214/GCA_000463665.1_PG_DSM_assembly2012_genomic.fna	10520
+/Users/raufs/Coding/skder/develop_v_1.3.3/skDER/test_case/Cutibacterium_granulosum_Genomes_in_GTDB_R214/GCA_900186975.1_50569_F01_genomic.fna	2175244

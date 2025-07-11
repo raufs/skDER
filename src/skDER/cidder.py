@@ -337,13 +337,33 @@ def secondaryClustering(rep_genomes, genome_protein_clusters, cidder_cluster_res
 
 	scrf_handle.close()
 
-def secondaryClusteringSkani(all_genomes_listing_file, rep_genomes, genome_protein_clusters, skani_result_file, cidder_cluster_result_file, logObject, threads=1):
+def secondaryClusteringSkani(cluster_dir, all_genomes_listing_file, rep_genomes, genome_protein_clusters, skani_result_file, cidder_cluster_result_file, logObject, threads=1):
 	msg = 'Performing assignment of genomes to their nearest representative genomes based on skani ANI estimates.'
 	sys.stdout.write(msg + '\n')
 	
-	# run skani triangle	
-	skani_triangle_cmd = ['skani', 'triangle', '-l', all_genomes_listing_file, '--min-af', '80.0', '-E', '-t', str(threads), '-o', skani_result_file]
-	util.runCmd(skani_triangle_cmd, logObject, check_files=[skani_result_file])
+	# run skani dist
+	rep_listing_file = cluster_dir + 'Reps_Listing.txt'
+	nonrep_listing_file = cluster_dir + 'NonReps_Listing.txt'
+
+	rlf = open(rep_listing_file, 'w')
+	nlf = open(nonrep_listing_file, 'w')
+	with open(all_genomes_listing_file) as oglf:
+		for line in oglf:
+			line = line.strip()
+			base_name = '.'.join(line.split('/')[-1].split('.')[:-1])
+			if base_name in rep_genomes:
+				rlf.write(line + '\n')
+			else:
+				nlf.write(line + '\n')
+	rlf.close()
+	nlf.close()
+
+	try:
+		skani_dist_cmd = ['skani', 'dist', '--rl', rep_listing_file, '--ql', nonrep_listing_file, 
+					      '-t', str(threads), '-o', skani_result_file]
+		util.runCmd(skani_dist_cmd, logObject, check_files=[skani_result_file])
+	except Exception:
+		raise RuntimeError('Error running skani dist command: %s' % ' '.join(skani_dist_cmd))
 
 	scrf_handle = open(cidder_cluster_result_file, 'w')
 	scrf_handle.write('genome\tnearest_representative_genome\taverage_nucleotide_identity\talignment_fraction\n')
