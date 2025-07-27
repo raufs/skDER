@@ -52,7 +52,7 @@ conda activate skder_env
 ```
 
 > [!TIP]
-> geNomad is actively under development and new databases and versions are being released intermittendly. In the above code, we are suggesting installing v1.8.0 because it has been tested to work with database version 1.5, which we suggest downloading below. These are the versions we used for the skDER/CiDDER manuscript. For the most up to date installation of geNomad and its database possible, please consult its [git repo](https://github.com/apcamargo/genomad.git). If there are issues with installation, please first try to install geNomad by itself in an individual conda repo. If successful, which suggests the issue is due to conflicts that have risen between geNomad and skDER/CiDDER dependencies, then please just let us know via a GitHub issue and we will attempt to resolve the issue.* 
+> geNomad is actively under development and new databases and versions are being released intermittendly. In the above code, we are suggesting installing v1.8.0 because it has been tested to work with database version 1.5, which we suggest downloading below. These are the versions we used for the skDER/CiDDER manuscript. For the most up to date installation of geNomad and its database possible, please consult its [git repo](https://github.com/apcamargo/genomad.git). *If there are issues with installation, please first try to install geNomad by itself in an individual conda repo. If successful, which suggests the issue is due to conflicts that have risen between geNomad and skDER/CiDDER dependencies, then please just let us know via a GitHub issue and we will attempt to resolve the issue.* 
 
 ### Docker 
 
@@ -112,19 +112,19 @@ skDER features three distinct algorithms for dereplication (details can be found
 - **greedy low-memory approach:** performs selection iteratively using a greedy set cover type approach where genomes chosen as representatives are prioritized soley based on N50. Should result in lower-quality representative selections compared to the standard greedy mode, which also prioritizes genomes based on connectivity, but should be more more memory-efficient. 
 
 > [!NOTE]
-> The skDER "greedy" algorithm is just referring to the selection algorithm - all vs all assessment is performed using skani triangle still. This is in contrast to dRep or galah where "greedy" is referring to their iterative process of selecting a representative genome followed by targeted ANI asseessment, to avoid all-vs-all comparison, of the genome against related genomes determined from primary, coarser clustering. The info needed for selecting the next representative genome is then known and the process is repeated as many times as needed. While this stratedgy can speed things up when using fastANI, with skani this does not make much of a difference (in applicaiton we found it can be more memory efficient - significantly when dealing with >10k genomes -, but also results in slower speeds than just using skani triangle directly). For memmory efficiency on very large datasets (which should only be relevant for a select set of genera) we might thus implement a greedy version which functions similar to dRep/galah (please stay tuned!). 
+> The skDER "greedy" algorithm is just referring to the selection algorithm - all vs all assessment is performed using skani triangle still. This is in contrast to dRep or galah where "greedy" is referring to their iterative process of selecting a representative genome followed by targeted ANI asseessment, to avoid all-vs-all comparison, of the genome against related genomes determined from primary, coarser clustering. The info needed for selecting the next representative genome is then known and the process is repeated as many times as needed. While this stratedgy can speed things up when using fastANI, with skani this does not make much of a difference (in applicaiton we found it can be more memory efficient - significantly when dealing with >10k genomes -, but also results in slower speeds than just using skani triangle directly). For memmory efficiency on very large datasets (which should only be relevant for a select set of genera) we thus recently implemented the `low_mem_greedy` approach. 
 
 #### CiDDER
 
-***Currently only for bacteria - because it uses pyrodigal for gene calling!***
-
 In v1.2.0, we also introduced a second program called CiDDER (CD-hit based DEReplication) - which allows for optimizing selection of a minimal number of genomes that achieve some level of saturation of the pan-genome of the full set of genomes (see below for details). Note, CD-HIT determines protein clusters, not proper ortholog groups, and as such an approximation is made of the pan-genome space being sampled by representative genomes.
+
+If providing genomes in FASTA format, this method will use pyrodigal for gene calling - which is specific to bacteria/archaea; however, more recently CiDDER can also accept proteome files which should allow it to work on eukaryotes and viruses as well. 
 
 ## Details on Dereplication Algorithms
 
 ### Using Pan-Genome Saturation (CiDDER)
 
-Starting in v1.2.0, CiDDER was introduced to allow representative genome selection based on pan-genome satauration estimates using CD-HIT. After inferring ORFs using pyrodigal, predicted protein sequences are conatenated into a giant FASTA file and clustered using CD-HIT (where parameters are possible to adjust). Each genome is thus treated as a set of distinct protein clusters it features. 
+Starting in v1.2.0, CiDDER was introduced to allow representative genome selection based on pan-genome saturation estimates using CD-HIT. After inferring ORFs using pyrodigal, predicted protein sequences are conatenated into a giant FASTA file and clustered using CD-HIT (where parameters are possible to adjust). Each genome is thus treated as a set of distinct protein clusters it features. 
 
 Here is an overview of the algorithm:
 
