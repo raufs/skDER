@@ -1,7 +1,4 @@
-import os
 import sys
-import gzip
-import traceback
 from skDER import util
 from operator import itemgetter
 import subprocess
@@ -101,6 +98,9 @@ def lowMemGreedyDerep(all_genomes_listing_file, skder_lm_workspace, concat_n50_r
 	
 	sketch_db_file = skder_lm_workspace + 'skani_sketch_all.db'
 	skder_sketch_cmd = ['skani', 'sketch', '-l', all_genomes_listing_file, '-o', sketch_db_file, '-t', str(threads)]
+	if util.is_skani_version_at_least_0_3_0():
+		skder_sketch_cmd += ['--separate-sketches']
+
 	util.runCmd(skder_sketch_cmd, logObject, check_directories=[sketch_db_file])
 
 	n50_data = []

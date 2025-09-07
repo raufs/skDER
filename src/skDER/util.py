@@ -17,6 +17,8 @@ import tqdm
 import resource
 import gzip
 import importlib.metadata
+import re
+from functools import lru_cache
 
 ACCEPTED_FASTA_SUFFICES = set(['fasta', 'fas', 'fna', 'fa'])
 ACCEPTED_PROTEIN_FASTA_SUFFICES = set(['fasta', 'faa', 'fa'])
@@ -28,6 +30,28 @@ def get_version():
 	except importlib.metadata.PackageNotFoundError:
 		package_version = "NA"
 	return package_version
+
+@lru_cache(maxsize=1)
+def is_skani_version_at_least_0_3_0() -> bool:
+    """
+    Return True if installed skani version is >= 0.3.0. Falls back to False on error.
+    """
+    try:
+        completed = subprocess.run(
+            ["skani", "--version"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        output = (completed.stdout or completed.stderr or "").strip()
+        match = re.search(r"(\d+)\.(\d+)\.(\d+)", output)
+        if not match:
+            return False
+        major, minor, patch = (int(match.group(1)), int(match.group(2)), int(match.group(3)))
+        return (major, minor, patch) >= (0, 3, 0)
+    except Exception:
+        return False
+
 
 def memory_limit(mem):
 	"""
