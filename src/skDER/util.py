@@ -744,7 +744,7 @@ def n50_calc(genome_file):
 	# get index for cumsum >= N/2
 	csumn2=min(csum[csum >= n2])
 	ind=where(csum == csumn2)
-	n50 = all_len[int(ind[0])]
+	n50 = all_len[ind[0][0]]
 	return(n50)
 
 
