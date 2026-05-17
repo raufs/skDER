@@ -50,7 +50,7 @@ import traceback
 
 version = util.get_version() 
 
-VALID_GTDB_RELEASES = set(['R220', 'R226'])
+VALID_GTDB_RELEASES = set(['R220', 'R226', 'R232'])
 PRESELECTED_ANI_CUTOFFS = [90.0, 95.0, 97.0, 98.0, 99.0, 99.5]
 PRESELECTED_AF_CUTOFFS = [10.0, 25.0, 50.0, 75.0, 90.0]
 
@@ -104,7 +104,7 @@ def create_parser():
 	parser.add_argument('-n', '--determine-clusters', action='store_true', help="Perform secondary clustering to assign non-representative\ngenomes to their closest representative genomes.", required=False, default=False)
 	parser.add_argument('-mn', '--minimal_n50', type=int, help="Minimal N50 of genomes to be included in dereplication\n[Default is 0].", required=False, default=0)
 	parser.add_argument('-l', '--symlink', action='store_true', help="Symlink representative genomes in results subdirectory\ninstead of performing a copy of the files.", required=False, default=False)
-	parser.add_argument('-r', '--gtdb-release', help='Which GTDB release to use if -t argument issued [Default is R226].', default="R226")
+	parser.add_argument('-r', '--gtdb-release', help='Which GTDB release to use if -t argument issued [Default is R232].', default="R232")
 	parser.add_argument('-auto', '--automate', action='store_true', help="Automatically skip warnings and download genomes from NCBI if -t\nargument issued. Automatation off by default to prevent\nunexpected downloading of large genomes [Default\nis False].", required=False, default=False)
 	parser.add_argument('-mm', '--max-memory', type=int, help="Max memory in Gigabytes [Default is 0 = unlimited].", required=False, default=0)
 	parser.add_argument('-c', '--threads', type=int, help="Number of threads/processes to use [Default is 1].", required=False, default=1)

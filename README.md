@@ -295,7 +295,7 @@ options:
   -l, --symlink         Symlink representative genomes in results subdirectory
                         instead of performing a copy of the files.
   -r GTDB_RELEASE, --gtdb-release GTDB_RELEASE
-                        Which GTDB release to use if -t argument issued [Default is R226].
+                        Which GTDB release to use if -t argument issued [Default is R232].
   -auto, --automate     Automatically skip warnings and download genomes from NCBI if -t
                         argument issued. Automatation off by default to prevent
                         unexpected downloading of large genomes [Default
@@ -417,7 +417,7 @@ options:
   -l, --symlink         Symlink representative genomes in results subdirectory
                         instead of performing a copy of the files.
   -r GTDB_RELEASE, --gtdb-release GTDB_RELEASE
-                        Which GTDB release to use if -t argument issued [Default is R226].
+                        Which GTDB release to use if -t argument issued [Default is R232].
   -auto, --automate     Automatically skip warnings and download genomes from NCBI if -t
                         argument issued. Automatation off by default to prevent
                         unexpected downloading of large genomes [Default
