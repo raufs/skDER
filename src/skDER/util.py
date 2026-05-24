@@ -31,6 +31,36 @@ def get_version():
 		package_version = "NA"
 	return package_version
 
+def is_command_available(command):
+	"""
+	Return True if command is available on PATH.
+	"""
+	return shutil.which(command) is not None
+
+def checkMGEFilterDependencies(filter_mge_flag, genomad_database=None, skip_regions_file=None, logObject=None):
+	"""
+	Verify that required external programs for MGE filtering are available.
+	Exits if dependencies are missing.
+	"""
+	if not filter_mge_flag:
+		return
+	if skip_regions_file != None:
+		return
+	if genomad_database != None:
+		if not is_command_available('genomad'):
+			msg = 'MGE filtering requested with geNomad via --genomad-database but the genomad program is not available on PATH. Please install geNomad or use PhiSpy (default) by omitting --genomad-database.'
+			sys.stderr.write(msg + '\n')
+			if logObject != None:
+				logObject.error(msg)
+			sys.exit(1)
+	else:
+		if not is_command_available('phispy'):
+			msg = 'MGE filtering requested via --filter-mge but the phispy program is not available on PATH. Please install PhiSpy or use geNomad via --genomad-database.'
+			sys.stderr.write(msg + '\n')
+			if logObject != None:
+				logObject.error(msg)
+			sys.exit(1)
+
 @lru_cache(maxsize=1)
 def is_skani_version_at_least_0_3_0() -> bool:
     """
@@ -497,7 +527,7 @@ def determineN50(genome_listing_file, outdir, logObject, threads=1):
 	
 	return(n50s)
 
-def writeN50sToFile(n50s, all_genomes_listing_file, concat_n50_result_file, logObject):
+def writeN50sToFile(n50s, all_genomes_listing_file, concat_n50_result_file, logObject, proc_to_unproc_mapping=None):
 	"""
 	Write N50 values to a file.
 	********************************************************************************************************************
@@ -505,6 +535,8 @@ def writeN50sToFile(n50s, all_genomes_listing_file, concat_n50_result_file, logO
 	- n50s: Dictionary of N50 values for each genome.
 	- all_genomes_listing_file: File containing the list of genomes.
 	- concat_n50_result_file: File to save the concatenated N50 results.
+	- proc_to_unproc_mapping: Optional mapping from processed genome paths to the
+	  original paths used when computing N50s (e.g. after MGE filtering).
 	********************************************************************************************************************
 	"""
 	
@@ -519,12 +551,159 @@ def writeN50sToFile(n50s, all_genomes_listing_file, concat_n50_result_file, logO
 	n50_handle = open(concat_n50_result_file, 'w')
 	for line in glmf_handle:
 		line = line.strip()
-		if line in n50s:
-			n50_handle.write(line + '\t' + str(n50s[line]) + '\n')
+		n50_key = line
+		if n50_key not in n50s and proc_to_unproc_mapping != None:
+			n50_key = proc_to_unproc_mapping.get(line, line)
+		if n50_key in n50s:
+			n50_handle.write(line + '\t' + str(n50s[n50_key]) + '\n')
 	glmf_handle.close()
 	n50_handle.close()
 
-def filterMGEs(all_genomes_listing_file, outdir, proc_genomes_listing_file, logObject, threads=1, genomad_database=None, genomad_splits=8):
+def _logSkipRegionWarnings(warning_file, warnings):
+	for warning in warnings:
+		msg = 'Warning: %s' % warning
+		sys.stderr.write(msg + '\n')
+		if warning_file != None:
+			with open(warning_file, 'a') as wh:
+				wh.write(msg + '\n')
+
+def _genomeBasenamesForMatching(genome_path):
+	genome_basename = os.path.basename(genome_path)
+	genome_basenames = {genome_basename}
+	if genome_basename.endswith('.gz'):
+		genome_basenames.add(genome_basename[:-3])
+	return genome_basenames
+
+def _skipRegionGenomeMatchesBasenames(genome_name, basenames):
+	genome_name_basename = os.path.basename(genome_name)
+	return genome_name_basename in basenames or genome_name in basenames
+
+def _inputGenomeBasenamesFromListing(all_genomes_listing_file):
+	listing_basenames = set()
+	with open(all_genomes_listing_file) as oaglf:
+		for line in oaglf:
+			line = line.strip()
+			if line != '':
+				listing_basenames.update(_genomeBasenamesForMatching(line))
+	return listing_basenames
+
+def reportUnmatchedSkipRegionGenomes(skip_regions_file, all_genomes_listing_file, warning_file, logObject=None):
+	listing_basenames = _inputGenomeBasenamesFromListing(all_genomes_listing_file)
+
+	unmatched_genome_lines = defaultdict(list)
+	malformed_lines = []
+	with open(skip_regions_file) as osrf:
+		for line_num, line in enumerate(osrf, 1):
+			line = line.strip()
+			if not line or line.startswith('#'):
+				continue
+			ls = line.split('\t')
+			if len(ls) < 4:
+				malformed_lines.append(line_num)
+				continue
+			genome_name = ls[0]
+			if not _skipRegionGenomeMatchesBasenames(genome_name, listing_basenames):
+				unmatched_genome_lines[genome_name].append(line_num)
+
+	warnings = []
+	for line_num in malformed_lines:
+		warnings.append('Line %d: expected 4 tab-delimited fields (genome file name, scaffold name, start, end)' % line_num)
+	for genome_name, line_nums in sorted(unmatched_genome_lines.items()):
+		warnings.append('Genome "%s" in skip regions file not found in input genome listing (lines: %s)' % (genome_name, ', '.join(map(str, line_nums))))
+
+	if len(warnings) > 0:
+		_logSkipRegionWarnings(warning_file, warnings)
+		if logObject != None:
+			for warning in warnings:
+				logObject.warning(warning)
+
+def filterGenomeUsingSkipRegions(skip_regions_file, genome_file, filtered_genome_file, skip_regions_warning_file=None, suppress_nonmatching_warnings=False):
+	"""
+	Filter genome using user-provided coordinates of regions to skip.
+	Tab-delimited skip_regions_file format: genome file name, scaffold name, start, end
+	"""
+	try:
+		genome_basename = os.path.basename(genome_file)
+		genome_basenames = _genomeBasenamesForMatching(genome_file)
+		genome_rows = []
+		total_valid_rows = 0
+		with open(skip_regions_file) as osrf:
+			for line_num, line in enumerate(osrf, 1):
+				line = line.strip()
+				if not line or line.startswith('#'):
+					continue
+				ls = line.split('\t')
+				if len(ls) < 4:
+					continue
+				total_valid_rows += 1
+				genome_name, scaffold = ls[0], ls[1]
+				if not _skipRegionGenomeMatchesBasenames(genome_name, genome_basenames):
+					continue
+				try:
+					start = int(ls[2])
+					end = int(ls[3])
+				except ValueError:
+					genome_rows.append((genome_name, scaffold, ls[2], ls[3], line_num, 'invalid coordinates'))
+					continue
+				genome_rows.append((genome_name, scaffold, start, end, line_num, None))
+
+		scaffold_lengths = {}
+		records = []
+		with open(genome_file) as ogf:
+			for rec in SeqIO.parse(ogf, 'fasta'):
+				scaffold_lengths[rec.id] = len(rec.seq)
+				records.append(rec)
+
+		mge_coords = defaultdict(set)
+		warnings = []
+		for genome_name, scaffold, start, end, line_num, parse_issue in genome_rows:
+			if parse_issue == 'invalid coordinates':
+				warnings.append('Line %d: invalid coordinates "%s"-"%s" for genome "%s", scaffold "%s"' % (line_num, start, end, genome_name, scaffold))
+				continue
+			if scaffold not in scaffold_lengths:
+				warnings.append('Line %d: scaffold "%s" not found in genome "%s"' % (line_num, scaffold, genome_basename))
+				continue
+			scaffold_len = scaffold_lengths[scaffold]
+			if start < 1 or end < start or end > scaffold_len:
+				warnings.append('Line %d: coordinates %d-%d out of range for scaffold "%s" (length %d) in genome "%s"' % (line_num, start, end, scaffold, scaffold_len, genome_basename))
+				continue
+			for pos in range(start, end+1):
+				mge_coords[scaffold].add(pos)
+
+		outf = open(filtered_genome_file, 'w')
+		for rec in records:
+			scaffold = rec.id
+			if scaffold in mge_coords:
+				nonmge_stretch = ''
+				nonmge_stretch_id = 1
+				for i, allele in enumerate(str(rec.seq)):
+					pos = i + 1
+					if pos in mge_coords[scaffold]:
+						if nonmge_stretch != '':
+							nsid = scaffold + '_' + str(nonmge_stretch_id)
+							outf.write('>' + nsid + '\n' + str(nonmge_stretch) + '\n')
+							nonmge_stretch_id += 1
+						nonmge_stretch = ''
+					else:
+						nonmge_stretch += allele
+				if nonmge_stretch != '':
+					nsid = scaffold + '_' + str(nonmge_stretch_id)
+					outf.write('>' + nsid + '\n' + str(nonmge_stretch) + '\n')
+			else:
+				outf.write('>' + rec.id + '_1\n' + str(rec.seq) + '\n')
+		outf.close()
+
+		if len(warnings) > 0:
+			_logSkipRegionWarnings(skip_regions_warning_file, warnings)
+
+		if not suppress_nonmatching_warnings and total_valid_rows > 0 and len(genome_rows) == 0:
+			_logSkipRegionWarnings(skip_regions_warning_file, ['No rows in skip regions file matched genome "%s" — check that genome file names in the skip regions file match the input genome basename' % genome_basename])
+	except:
+		sys.stderr.write('Issue with filtering genome based on user-provided skip regions.\n')
+		sys.stderr.write(traceback.format_exc())
+		sys.exit(1)
+
+def filterMGEs(all_genomes_listing_file, outdir, proc_genomes_listing_file, logObject, threads=1, genomad_database=None, genomad_splits=8, skip_regions_file=None):
 	mgecut_processed_dir = outdir + 'mgecut_processed_genomes/'
 	mgecut_tmp_dir = outdir + 'mgecut_tmp/'
 	setupDirectories([mgecut_processed_dir, mgecut_tmp_dir])
@@ -539,6 +718,12 @@ def filterMGEs(all_genomes_listing_file, outdir, proc_genomes_listing_file, logO
 	mge_unproc_to_proc_mapping = {}
 	mgecut_cmds = []
 	genomes = 0
+	skip_regions_warning_file = None
+	if skip_regions_file != None:
+		skip_regions_warning_file = outdir + 'Skip_Regions_Unmatched_Coordinates.txt'
+		if os.path.isfile(skip_regions_warning_file):
+			os.remove(skip_regions_warning_file)
+		reportUnmatchedSkipRegionGenomes(skip_regions_file, all_genomes_listing_file, skip_regions_warning_file, logObject=logObject)
 	with open(all_genomes_listing_file) as oaglf:
 		for line in oaglf:
 			genome = line.strip()
@@ -547,14 +732,24 @@ def filterMGEs(all_genomes_listing_file, outdir, proc_genomes_listing_file, logO
 			mge_unproc_to_proc_mapping[genome] = proc_genome
 			tmp_dir = mgecut_tmp_dir + genome.split('/')[-1]
 			mgecut_cmd = ['mgecut', '-i', genome, '-o', proc_genome, '-d', tmp_dir]
-			if genomad_database != None:
+			if skip_regions_file != None:
+				mgecut_cmd += ['-m', 'skip-regions', '-sr', skip_regions_file, '-sw', tmp_dir + 'skip_regions_warnings.txt', '--suppress-nonmatching-warnings']
+			elif genomad_database != None:
 				mgecut_cmd += ['-m', 'genomad', '-gd', genomad_database, '-gs', str(genomad_splits), '-c', str(threads)]
 			else:
 				mgecut_cmd += ['-m', 'phispy', '-c', str(multi_thread)]
 			mgecut_cmds.append(mgecut_cmd)
 			genomes += 1
 	try:
-		if genomad_database == None:
+		if skip_regions_file != None:
+			msg = 'Processing %d mgecut commands - using user-provided skip regions!' % len(mgecut_cmds)
+			sys.stdout.write(msg + '\n')
+			logObject.info(msg)
+			p = multiprocessing.Pool(threads)
+			for _ in tqdm.tqdm(p.imap_unordered(multiProcess, mgecut_cmds), total=len(mgecut_cmds)):
+				pass
+			p.close()
+		elif genomad_database == None:
 			msg = 'Processing %d mgecut commands - using PhiSpy!' % len(mgecut_cmds)
 			sys.stdout.write(msg + '\n')
 			logObject.info(msg)
@@ -574,6 +769,20 @@ def filterMGEs(all_genomes_listing_file, outdir, proc_genomes_listing_file, logO
 		msg = "An error occurred during multiprocessing: %s" % str(e)
 		sys.stderr.write(msg + '\n')
 		logObject.info(msg)
+
+	if skip_regions_file != None:
+		for subdir in os.listdir(mgecut_tmp_dir):
+			per_genome_warning_file = mgecut_tmp_dir + subdir + '/skip_regions_warnings.txt'
+			if os.path.isfile(per_genome_warning_file):
+				with open(per_genome_warning_file) as pgwf:
+					warning_lines = pgwf.read()
+				if warning_lines != '':
+					with open(skip_regions_warning_file, 'a') as swf:
+						swf.write(warning_lines)
+		if os.path.isfile(skip_regions_warning_file):
+			msg = 'Skip region coordinate warnings were written to: %s' % skip_regions_warning_file
+			sys.stdout.write(msg + '\n')
+			logObject.warning(msg)
 
 	glmf_handle = open(proc_genomes_listing_file, 'w')
 	processed_genomes = 0

@@ -47,7 +47,7 @@ import traceback
 
 version = util.get_version()
 
-VALID_METHODS = set(['phispy', 'genomad'])
+VALID_METHODS = set(['phispy', 'genomad', 'skip-regions'])
 
 def create_parser():
 	""" Parse arguments """
@@ -75,7 +75,10 @@ def create_parser():
 	parser.add_argument('-i', '--input-genome', help="Path to input genome.", required=True)
 	parser.add_argument('-o', '--filtered-genome', help="Path to resulting filtered genome for MGEs.", required=True)
 	parser.add_argument('-d', '--mge-predict-dir', help="Path to directory where geNomad and PhiSpy results and other intermediate files will be written.", required=True)
-	parser.add_argument('-m', '--method', help="Method to use for MGE annotation. Options are 'phispy' and 'genomad' [Default is phispy].", required=False, default="phispy")
+	parser.add_argument('-m', '--method', help="Method to use for MGE annotation. Options are 'phispy', 'genomad',\nand 'skip-regions' [Default is phispy].", required=False, default="phispy")
+	parser.add_argument('-sr', '--skip-regions-file', help="Tab-delimited file defining genomic regions to skip:\ngenome file name, scaffold name, start, end.\nRequired if skip-regions method is requested.", required=False, default=None)
+	parser.add_argument('-sw', '--skip-regions-warning-file', help="File to which warnings about unmatched skip region\ncoordinates will be appended.", required=False, default=None)
+	parser.add_argument('--suppress-nonmatching-warnings', action='store_true', help="Suppress warnings for skip region rows whose genome\nname does not match the input genome. Used internally\nduring batch processing where a global check is\nperformed upfront.", required=False, default=False)
 	parser.add_argument('-gd', '--genomad-db', help="Path to geNomad database. Required if geNomad is requested.", required=False, default=None)
 	parser.add_argument('-gs', '--genomad-splits', type=int, help="The number of split operations in geNomad end-to-end run to keep memory down [Default is 8].", required=False, default=8)
 	parser.add_argument('-c', '--threads', type=int, help="Number of threads/processes to use [Default is 1].", required=False, default=1)
@@ -95,9 +98,20 @@ def mgecut():
 	output_genome = os.path.abspath(myargs.filtered_genome)
 	tmp_dir = os.path.abspath(myargs.mge_predict_dir) + '/'
 	method = myargs.method.lower()
+	skip_regions_file = myargs.skip_regions_file
+	skip_regions_warning_file = myargs.skip_regions_warning_file
+	suppress_nonmatching_warnings = myargs.suppress_nonmatching_warnings
 	genomad_splits = myargs.genomad_splits
 	genomad_db = myargs.genomad_db
 	threads = myargs.threads
+
+	if skip_regions_file != None:
+		skip_regions_file = os.path.abspath(skip_regions_file)
+		try:
+			assert(os.path.isfile(skip_regions_file))
+		except:
+			sys.stderr.write('skip-regions method requested but no or invalid path to skip regions file provided via --skip-regions-file.\n')
+			sys.exit(1)
 
 	if os.path.isdir(tmp_dir):
 		sys.stderr.write('Warning: either the directory provided for --mge-predict-dir or the file for --filtered-genome already exist.\nWill be overwriting in 5 seconds...\n')
@@ -121,10 +135,21 @@ def mgecut():
 	try:
 		assert(method in VALID_METHODS)
 	except:
-		sys.stderr.write('Selection mode requested not valid, must be either "genomad" or  "phispy".\n')
+		sys.stderr.write('Selection mode requested not valid, must be either "genomad", "phispy", or "skip-regions".\n')
 		sys.exit(1)
 
-	if method == 'phispy':
+	if method == 'skip-regions':
+		try:
+			assert(skip_regions_file != None)
+		except:
+			sys.stderr.write('skip-regions method requested but no path to skip regions file provided via --skip-regions-file.\n')
+			sys.exit(1)
+		sys.stderr.write('Using user-provided skip regions to filter genome assembly!\n')
+		if skip_regions_warning_file == None:
+			skip_regions_warning_file = tmp_dir + 'skip_regions_warnings.txt'
+		util.filterGenomeUsingSkipRegions(skip_regions_file, input_genome, output_genome, skip_regions_warning_file=skip_regions_warning_file, suppress_nonmatching_warnings=suppress_nonmatching_warnings)
+
+	elif method == 'phispy':
 		sys.stderr.write('Using PhiSpy to predict and cut out MGEs from genome assembly!\n')
 		expected_gbk = tmp_dir + 'Sample.gbk'
 		gbk_create_cmd = ['runProdigalAndMakeProperGenbank.py', '-i', input_genome, '-o', tmp_dir]

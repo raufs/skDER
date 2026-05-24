@@ -100,6 +100,7 @@ def create_parser():
 	parser.add_argument('-p', '--skani-triangle-parameters', help="Options for skani triangle. Note ANI and AF cutoffs\nare specified separately and the -E parameter is always\nrequested. [Default is \"-s X\", where X is\n10 below the ANI cutoff].", default="-s X", required=False)
 	parser.add_argument('-s', '--sanity-check', action='store_true', help="Confirm each FASTA file provided or downloaded is actually\na FASTA file. Makes it slower, but generally\ngood practice.", required=False, default=False)
 	parser.add_argument('-fm', '--filter-mge', action='store_true', help="Filter predicted MGE coordinates along genomes before\ndereplication assessment but after N50\ncomputation.", required=False, default=False)
+	parser.add_argument('-fms', '--filter-mge-skip-regions', help="Path to tab-delimited file defining genomic regions to\nskip during MGE filtering (genome file name, scaffold\nname, start, end). Enables MGE filtering using\nuser-provided coordinates instead of PhiSpy/geNomad\nprediction (experimental).", required=False, default=None)
 	parser.add_argument('-gd', '--genomad-database', help="If filter-mge is specified, it will by default use PhiSpy;\nhowever, if a database directory for\ngeNomad is provided - it will use that instead\nto predict MGEs.", default=None, required=False)
 	parser.add_argument('-n', '--determine-clusters', action='store_true', help="Perform secondary clustering to assign non-representative\ngenomes to their closest representative genomes.", required=False, default=False)
 	parser.add_argument('-mn', '--minimal_n50', type=int, help="Minimal N50 of genomes to be included in dereplication\n[Default is 0].", required=False, default=0)
@@ -138,21 +139,40 @@ def skder_main():
 	minimal_n50 = myargs.minimal_n50
 	sanity_check_flag = myargs.sanity_check
 	filter_mge_flag = myargs.filter_mge
+	filter_mge_skip_regions_file = myargs.filter_mge_skip_regions
 	automate_flag = myargs.automate
 	genomad_database = myargs.genomad_database
 	max_memory = myargs.max_memory
+
+	if filter_mge_skip_regions_file != None:
+		filter_mge_flag = True
+		filter_mge_skip_regions_file = os.path.abspath(filter_mge_skip_regions_file)
+		try:
+			assert(os.path.isfile(filter_mge_skip_regions_file))
+		except:
+			sys.stderr.write('filter-mge-skip-regions requested but no or invalid path to skip regions file provided via --filter-mge-skip-regions.\n')
+			sys.exit(1)
+
+	if filter_mge_skip_regions_file != None and genomad_database != None:
+		sys.stderr.write('Cannot specify both --filter-mge-skip-regions and --genomad-database. Exiting ...\n')
+		sys.exit(1)
 
 	if minimal_n50 < 0:
 		sys.stderr.write('Minimal N50 requested is less than 0. Exiting ...\n')
 		sys.exit(1)
 
 	if genomad_database != None:
-		sys.stdout.write('Attempting to use geNomad to predict and cut out MGEs from genome assembly!\n')
 		try:
 			assert(genomad_database != None and os.path.isdir(genomad_database))
 		except:
 			sys.stderr.write('geNomad requested as method but no or invalid path to the geNomad database provided via --genomad-db.\n')
 			sys.exit(1)
+
+	if filter_mge_flag:
+		util.checkMGEFilterDependencies(filter_mge_flag, genomad_database=genomad_database, skip_regions_file=filter_mge_skip_regions_file)
+
+	if genomad_database != None:
+		sys.stdout.write('Attempting to use geNomad to predict and cut out MGEs from genome assembly!\n')
 
 	try:
 		assert(selection_mode in set(['dynamic', 'greedy', 'low_mem_greedy']))
@@ -308,7 +328,7 @@ def skder_main():
 	if filter_mge_flag:
 		proc_genomes_listing_file = outdir + 'All_Genomes_Listing_mgecut_Processed.txt'	
 		try:
-			mge_proc_to_unproc_mapping, mge_unproc_to_proc_mapping = util.filterMGEs(all_genomes_listing_file, outdir, proc_genomes_listing_file, logObject, threads=threads, genomad_database=genomad_database)
+			mge_proc_to_unproc_mapping, mge_unproc_to_proc_mapping = util.filterMGEs(all_genomes_listing_file, outdir, proc_genomes_listing_file, logObject, threads=threads, genomad_database=genomad_database, skip_regions_file=filter_mge_skip_regions_file)
 		except Exception as e:
 			msg = 'Error: issue filtering MGEs. Exiting ...'
 			sys.stderr.write(msg + '\n')
@@ -320,7 +340,8 @@ def skder_main():
 
 	# create N50 file with names matching file paths
 	concat_n50_result_file = outdir + 'Concatenated_N50.txt'
-	util.writeN50sToFile(n50s, all_genomes_listing_file, concat_n50_result_file, logObject)
+	util.writeN50sToFile(n50s, all_genomes_listing_file, concat_n50_result_file, logObject,
+	                     proc_to_unproc_mapping=mge_proc_to_unproc_mapping)
 
 	# run skani triangle
 	skani_result_file = outdir + 'Skani_Triangle_Edge_Output.txt'

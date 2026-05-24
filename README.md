@@ -208,14 +208,14 @@ The help function should return the following:
 
 ```
 usage: skder [-h] [-g GENOMES [GENOMES ...]] [-t TAXA_NAME] -o OUTPUT_DIRECTORY [-d DEREPLICATION_MODE] [-i PERCENT_IDENTITY_CUTOFF] [-f ALIGNED_FRACTION_CUTOFF] [-a MAX_AF_DISTANCE_CUTOFF] [-tc]
-             [-p SKANI_TRIANGLE_PARAMETERS] [-s] [-fm] [-gd GENOMAD_DATABASE] [-n] [-mn MINIMAL_N50] [-l] [-r GTDB_RELEASE] [-auto] [-mm MAX_MEMORY] [-c THREADS] [-v]
+             [-p SKANI_TRIANGLE_PARAMETERS] [-s] [-fm] [-fms FILTER_MGE_SKIP_REGIONS] [-gd GENOMAD_DATABASE] [-n] [-mn MINIMAL_N50] [-l] [-r GTDB_RELEASE] [-auto] [-mm MAX_MEMORY] [-c THREADS] [-v]
 
 	Program: skder
 	Author: Rauf Salamzade
 	Affiliation: Kalan Lab, UW Madison, Department of Medical Microbiology and Immunology
 
 	skDER: efficient & high-resolution dereplication of microbial genomes to select
-		   representative genomes.
+	representative genomes.
 
 	skDER will perform dereplication of genomes using skani average nucleotide identity
 	(ANI) and aligned fraction (AF) estimates and either a dynamic programming or
@@ -281,6 +281,12 @@ options:
   -fm, --filter-mge     Filter predicted MGE coordinates along genomes before
                         dereplication assessment but after N50
                         computation.
+  -fms FILTER_MGE_SKIP_REGIONS, --filter-mge-skip-regions FILTER_MGE_SKIP_REGIONS
+                        Path to tab-delimited file defining genomic regions to
+                        skip during MGE filtering (genome file name, scaffold
+                        name, start, end). Enables MGE filtering using
+                        user-provided coordinates instead of PhiSpy/geNomad
+                        prediction (experimental).
   -gd GENOMAD_DATABASE, --genomad-database GENOMAD_DATABASE
                         If filter-mge is specified, it will by default use PhiSpy;
                         however, if a database directory for
@@ -318,16 +324,17 @@ The help function should return the following:
 
 ```
 usage: cidder [-h] [-g GENOMES [GENOMES ...]] [-p PROTEOMES [PROTEOMES ...]] [-t TAXA_NAME] [-a NEW_PROTEINS_NEEDED] [-ts TOTAL_SATURATION] [-mgs MULTI_GENOME_SATURATION] [-rs REQUIRE_SIMILARITY] -o
-              OUTPUT_DIRECTORY [-cdp CD_HIT_PARAMS] [-mg] [-e] [-s] [-fm] [-gd GENOMAD_DATABASE] [-n] [-ns] [-mn MINIMAL_N50] [-l] [-r GTDB_RELEASE] [-auto] [-c THREADS] [-mm MAX_MEMORY] [-v]
+              OUTPUT_DIRECTORY [-cdp CD_HIT_PARAMS] [-mg] [-e] [-s] [-fm] [-fms FILTER_MGE_SKIP_REGIONS] [-gd GENOMAD_DATABASE] [-n] [-ns] [-mn MINIMAL_N50] [-l] [-r GTDB_RELEASE] [-auto] [-c THREADS]
+              [-mm MAX_MEMORY] [-v]
 
 	Program: cidder
 	Author: Rauf Salamzade
 	Affiliation: Kalan Lab, UW Madison, Department of Medical Microbiology and Immunology
 
 	CiDDER: Performs genome dereplication based on CD-HIT clustering of proteins to
-			select a representative set of genomes which adequately samples the
-			pangenome space. Because gene prediction is performed using pyrodigal,
-			geneder only works for bacterial genomes at the moment.
+	select a representative set of genomes which adequately samples the
+	pangenome space. Because gene prediction is performed using pyrodigal,
+	geneder only works for bacterial genomes at the moment.
 
 	The general algorithm is to first select the genome with the most number of distinct
 	open-reading-frames (ORFS; predicted genes) and then iteratively add genomes based on
@@ -398,6 +405,12 @@ options:
   -fm, --filter-mge     Filter predicted MGE coordinates along genomes before
                         dereplication assessment but after N50
                         computation.
+  -fms FILTER_MGE_SKIP_REGIONS, --filter-mge-skip-regions FILTER_MGE_SKIP_REGIONS
+                        Path to tab-delimited file defining genomic regions to
+                        skip during MGE filtering (genome file name, scaffold
+                        name, start, end). Enables MGE filtering using
+                        user-provided coordinates instead of PhiSpy/geNomad
+                        prediction (experimental).
   -gd GENOMAD_DATABASE, --genomad-database GENOMAD_DATABASE
                         If filter-mge is specified, it will by default use PhiSpy;
                         however, if a database directory for
@@ -427,6 +440,73 @@ options:
   -mm MAX_MEMORY, --max-memory MAX_MEMORY
                         Max memory in Gigabytes [Default is 0 = unlimited].
   -v, --version         Report version of CiDDER.
+```
+
+### Usage for mgecut
+
+`mgecut` is a helper utility for removing MGE regions from genome assemblies before dereplication. It is called internally by skDER and CiDDER when `--filter-mge` is specified, but can also be run independently.
+
+```bash
+# the mgecut executable should be in the path after installation and can be referenced as such:
+mgecut -h
+```
+
+The help function should return the following:
+
+```
+usage: mgecut [-h] -i INPUT_GENOME -o FILTERED_GENOME -d MGE_PREDICT_DIR [-m METHOD] [-sr SKIP_REGIONS_FILE] [-sw SKIP_REGIONS_WARNING_FILE] [--suppress-nonmatching-warnings] [-gd GENOMAD_DB]
+              [-gs GENOMAD_SPLITS] [-c THREADS] [-v]
+
+	Program: mgecut
+	Author: Rauf Salamzade
+	Affiliation: Kalan Lab, UW Madison, McMaster University
+				  
+	mgecut: mobile-genetic-element (MGE) removal from bacterial genomic assemblies.	
+
+	mgecut uses either PhiSpy (faster, less accurate & sensitive, designed only for 
+	phages) or geNomad (slower, more accurate - designed for phages and plasmids) to 
+	detect MGEs and then processes the results to remove MGE regions in genomes. 
+	
+	Please cite either PhiSpy or geNomad depending on which method you use:
+				  
+  - PhiSpy: a novel algorithm for finding prophages in bacterial genomes that combines 
+	  similarity- and composition-based strategies. Nucleic Acids Research. 
+    Akhter, Aziz, and Edwards, 2012
+	
+	- Identification of mobile genetic elements with geNomad. Nature Biotechnology. 
+	  Camargo et al. 2023
+
+
+options:
+  -h, --help            show this help message and exit
+  -i INPUT_GENOME, --input-genome INPUT_GENOME
+                        Path to input genome.
+  -o FILTERED_GENOME, --filtered-genome FILTERED_GENOME
+                        Path to resulting filtered genome for MGEs.
+  -d MGE_PREDICT_DIR, --mge-predict-dir MGE_PREDICT_DIR
+                        Path to directory where geNomad and PhiSpy results and other intermediate files will be written.
+  -m METHOD, --method METHOD
+                        Method to use for MGE annotation. Options are 'phispy', 'genomad',
+                        and 'skip-regions' [Default is phispy].
+  -sr SKIP_REGIONS_FILE, --skip-regions-file SKIP_REGIONS_FILE
+                        Tab-delimited file defining genomic regions to skip:
+                        genome file name, scaffold name, start, end.
+                        Required if skip-regions method is requested.
+  -sw SKIP_REGIONS_WARNING_FILE, --skip-regions-warning-file SKIP_REGIONS_WARNING_FILE
+                        File to which warnings about unmatched skip region
+                        coordinates will be appended.
+  --suppress-nonmatching-warnings
+                        Suppress warnings for skip region rows whose genome
+                        name does not match the input genome. Used internally
+                        during batch processing where a global check is
+                        performed upfront.
+  -gd GENOMAD_DB, --genomad-db GENOMAD_DB
+                        Path to geNomad database. Required if geNomad is requested.
+  -gs GENOMAD_SPLITS, --genomad-splits GENOMAD_SPLITS
+                        The number of split operations in geNomad end-to-end run to keep memory down [Default is 8].
+  -c THREADS, --threads THREADS
+                        Number of threads/processes to use [Default is 1].
+  -v, --version         Report version of mgecut.
 ```
 
 ## Citation notice
