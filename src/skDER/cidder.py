@@ -146,7 +146,7 @@ def runAndProcessDiamondLinclust(combined_proteome_faa, diamond_result_prefix, d
 	try:
 		util.runCmd(diamond_cmd, logObject, check_files=[diamond_cluster_file])
 	except:
-		msg = 'Issue with running diamond linclust. This is likely because the memory requested was not sufficient, try increaseing memory using the `-mm` argument in cidder.'
+		msg = 'Issue with running diamond linclust. This is could be because the memory requested was not sufficient, try increaseing memory using the `-mm` argument in cidder.'
 		sys.stderr.write(msg + '\n')
 		logObject.error(msg)
 		sys.exit(1)
