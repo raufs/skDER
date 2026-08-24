@@ -279,9 +279,9 @@ def skder_main():
 	try:
 		n50s = util.determineN50(all_genomes_listing_file, outdir, logObject, threads=threads)
 	except Exception as e:
-		msg = 'Error: issue determining N50s. Exiting ...'	
+		msg = 'Error: issue determining N50s. Exiting ...'
 		sys.stderr.write(msg + '\n')
-		logObject(msg)
+		logObject.error(msg)
 		sys.stderr.write(traceback.format_exc() + '\n')
 		logObject.error(traceback.format_exc())
 		sys.exit(1)

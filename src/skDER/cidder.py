@@ -122,6 +122,65 @@ def runAndProcessCDHIT(combined_proteome_faa, cdhit_result_prefix, cd_hit_params
 
 	return([genome_protein_clusters, genome_cluster_counts, c_count, mgc_count, multi_genome_clusters])
 
+def runAndProcessDiamondLinclust(combined_proteome_faa, diamond_result_prefix, diamond_params, memory, threads, logObject):
+	# run diamond linclust on combined proteomes file
+	diamond_db_file = diamond_result_prefix + '.dmnd'
+	diamond_cluster_file = diamond_result_prefix + '.tsv'
+	diamond_tmpdir = diamond_result_prefix + '_tmp/'
+	util.setupDirectories([diamond_tmpdir])
+
+	makedb_cmd = ['diamond', 'makedb', '--in', combined_proteome_faa, '--db', diamond_db_file, '--threads', str(threads)]
+	try:
+		util.runCmd(makedb_cmd, logObject, check_files=[diamond_db_file])
+	except:
+		msg = 'Issue with running diamond makedb.'
+		sys.stderr.write(msg + '\n')
+		logObject.error(msg)
+		sys.exit(1)
+
+	diamond_cmd = ['diamond', 'linclust', '--db', diamond_db_file, '--out', diamond_cluster_file,
+				   '--threads', str(threads), '--tmpdir', diamond_tmpdir]
+	if memory > 0:
+		diamond_cmd += ['--memory-limit', str(memory)]
+	diamond_cmd.append(diamond_params)
+	try:
+		util.runCmd(diamond_cmd, logObject, check_files=[diamond_cluster_file])
+	except:
+		msg = 'Issue with running diamond linclust. This is likely because the memory requested was not sufficient, try increaseing memory using the `-mm` argument in cidder.'
+		sys.stderr.write(msg + '\n')
+		logObject.error(msg)
+		sys.exit(1)
+
+	# process diamond linclust clustering results (format: representative_id <tab> member_id, one line per member)
+	genome_protein_clusters = defaultdict(set)
+	cluster_genomes = defaultdict(set)
+	cluster_ids = set([])
+	with open(diamond_cluster_file) as odcf:
+		for line in odcf:
+			line = line.strip('\n')
+			if line == '':
+				continue
+			rep_id, mem_id = line.split('\t')
+			cluster_ids.add(rep_id)
+			genome = mem_id.split('|')[0]
+			genome_protein_clusters[genome].add(rep_id)
+			cluster_genomes[rep_id].add(genome)
+	c_count = len(cluster_ids)
+
+	multi_genome_clusters = set([])
+	for c in cluster_genomes:
+		if len(cluster_genomes[c]) > 1:
+			multi_genome_clusters.add(c)
+	mgc_count = len(multi_genome_clusters)
+
+	genome_cluster_counts = defaultdict(int)
+	for g in genome_protein_clusters:
+		genome_cluster_counts[g] = len(genome_protein_clusters[g])
+
+	shutil.rmtree(diamond_tmpdir)
+
+	return([genome_protein_clusters, genome_cluster_counts, c_count, mgc_count, multi_genome_clusters])
+
 
 def performRepresentativeGenomeSelection(genome_protein_clusters, genome_cluster_counts, c_count,
 		   								 mgc_count, multi_genome_clusters, new_proteins_needed, saturation_cutoff, 

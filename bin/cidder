@@ -70,8 +70,13 @@ def create_parser():
 	distinct ORFs are found to have been sampled. The "added-on" genomes from the iterative 
 	procedure are listed as representative genomes.  
 								  
-	For information on how to alter CD-HIT parameters, please see: 
+	For information on how to alter CD-HIT parameters, please see:
 	https://github.com/weizhongli/cdhit/blob/master/doc/cdhit-user-guide.wiki#cd-hit
+
+	Alternatively, protein clustering can be performed using diamond linclust instead of
+	CD-HIT via the --clustering-method argument. For information on how to alter diamond
+	linclust parameters, please see:
+	https://github.com/bbuchfink/diamond/wiki/Clustering
 
 	Note, if --filter-mge is requested, the statistics reported in clustering reports (number 
 	of proteins overlapping, ANI) in the clustering reports will all be based on processed 
@@ -85,8 +90,13 @@ def create_parser():
 
 	and
 
-	skDER & CiDDER: microbial genome dereplication approaches for comparative genomic and 
+	skDER & CiDDER: microbial genome dereplication approaches for comparative genomic and
 	metagenomic applications. Salamzade, Kottapalli, and Kalan, 2025.
+
+	If you use the --clustering-method diamond option, please also kindly cite:
+
+	Sensitive protein alignments at tree-of-life scale using DIAMOND. Nature Methods.
+	Buchfink, Reuter, and Drost, 2021.
     """, formatter_class=argparse.RawTextHelpFormatter)
 
 	parser.add_argument('-g', '--genomes', nargs='+', help='Genome assembly file paths or paths to containing\ndirectories. Files should be in FASTA format (accepted suffices\nare: *.fasta, *.fa, *.fas, or *.fna) [Optional].', required=False, default=[])
@@ -97,7 +107,9 @@ def create_parser():
 	parser.add_argument('-mgs', '--multi-genome-saturation', type=float, help="The percentage of total multi-genome protein clusters needed to stop\nrepresentative genome selection [Default is 100.0].", required=False, default=100.0)
 	parser.add_argument('-rs', '--require-similarity', type=float, help="Require non-representative genomes to have X%% of their protein\nclusters represented by an individual representative genome [Default is 0.0].", required=False, default=0.0)
 	parser.add_argument('-o', '--output-directory', help='Output directory.', required=True)
+	parser.add_argument('-cm', '--clustering-method', help="Method to use for clustering proteins into ortholog/protein\nclusters: 'cd-hit' or 'diamond' (uses diamond linclust)\n[Default is cd-hit].", required=False, default='cd-hit', choices=['cd-hit', 'diamond'])
 	parser.add_argument('-cdp', '--cd-hit-params', help="CD-HIT parameters to use for clustering proteins - select carefully\n(don't set threads or memory - those are done by default in cidder) and\nsurround by quotes [Default is: \"-n 5 -c 0.95 -aL 0.75 -aS 0.90\"]", required=False, default="-n 5 -c 0.95 -aL 0.75 -aS 0.90")
+	parser.add_argument('-dlp', '--diamond-linclust-params', help="Diamond linclust parameters to use for clustering proteins - select\ncarefully (don't set threads or memory - those are done by default\nin cidder) and surround by quotes [Default is: \"--approx-id 95\n--member-cover 90\"]", required=False, default="--approx-id 95 --member-cover 90")
 	parser.add_argument('-mg', '--metagenome-mode', action='store_true', help="Run pyrodigal using metagenome mode.",  required=False, default=False)
 	parser.add_argument('-e', '--include-edge-orfs', action='store_true', help="Include proteins from ORFs that hang off the edge of a contig/scaffold.", required=False, default=False)
 	parser.add_argument('-s', '--sanity-check', action='store_true', help="Confirm each FASTA file provided or downloaded is actually\na FASTA file. Makes it slower, but generally\ngood practice.", required=False, default=False)
@@ -132,6 +144,8 @@ def cidder_main():
 	gtdb_release = myargs.gtdb_release.upper()
 	outdir = os.path.abspath(myargs.output_directory) + '/'
 	cd_hit_params = myargs.cd_hit_params.strip('"')
+	clustering_method = myargs.clustering_method
+	diamond_linclust_params = myargs.diamond_linclust_params.strip('"')
 	metagenome_mode = myargs.metagenome_mode
 	include_edge_orfs = myargs.include_edge_orfs
 	new_proteins_needed = myargs.new_proteins_needed
@@ -262,18 +276,19 @@ def cidder_main():
 		logObject.info(msg)
 		
 	# calculate N50s
-	n50s = None
-	try:
-		n50s = util.determineN50(all_genomes_listing_file, outdir, logObject, threads=threads)
-	except Exception as e:
-		msg = 'Error: issue determining N50s. Exiting ...'	
-		sys.stderr.write(msg + '\n')
-		logObject(msg)
-		sys.stderr.write(traceback.format_exc() + '\n')
-		logObject.error(traceback.format_exc())
-		sys.exit(1)
+	n50s = {}
+	if number_of_genomes > 0:
+		try:
+			n50s = util.determineN50(all_genomes_listing_file, outdir, logObject, threads=threads)
+		except Exception as e:
+			msg = 'Error: issue determining N50s. Exiting ...'
+			sys.stderr.write(msg + '\n')
+			logObject.error(msg)
+			sys.stderr.write(traceback.format_exc() + '\n')
+			logObject.error(traceback.format_exc())
+			sys.exit(1)
 
-	if minimal_n50 > 0:
+	if number_of_genomes > 0 and minimal_n50 > 0:
 		msg = 'Filtering genomes with an N50 less than %d.' % minimal_n50
 		sys.stdout.write(msg + '\n')
 		logObject.info(msg)
@@ -361,16 +376,28 @@ def cidder_main():
 		sys.stdout.write(msg + '\n')
 		logObject.info(msg)
 
-	cdhit_result_prefix = outdir + 'CD-HIT_clustering.faa'
-	try:
-		genome_protein_clusters, genome_cluster_counts, c_count, mgc_count, multi_genome_clusters = cidder.runAndProcessCDHIT(combined_proteome_faa, cdhit_result_prefix, cd_hit_params, max_memory, threads, logObject)
-	except Exception as e:
-		msg = 'Error: running or processing CD-HIT clustering. Exiting ...'
-		sys.stderr.write(msg + '\n')
-		logObject.error(msg)
-		sys.stderr.write(traceback.format_exc() + '\n')
-		logObject.error(traceback.format_exc())
-		sys.exit(1)
+	if clustering_method == 'diamond':
+		diamond_result_prefix = outdir + 'Diamond_Linclust_Clustering'
+		try:
+			genome_protein_clusters, genome_cluster_counts, c_count, mgc_count, multi_genome_clusters = cidder.runAndProcessDiamondLinclust(combined_proteome_faa, diamond_result_prefix, diamond_linclust_params, max_memory, threads, logObject)
+		except Exception as e:
+			msg = 'Error: running or processing diamond linclust clustering. Exiting ...'
+			sys.stderr.write(msg + '\n')
+			logObject.error(msg)
+			sys.stderr.write(traceback.format_exc() + '\n')
+			logObject.error(traceback.format_exc())
+			sys.exit(1)
+	else:
+		cdhit_result_prefix = outdir + 'CD-HIT_clustering.faa'
+		try:
+			genome_protein_clusters, genome_cluster_counts, c_count, mgc_count, multi_genome_clusters = cidder.runAndProcessCDHIT(combined_proteome_faa, cdhit_result_prefix, cd_hit_params, max_memory, threads, logObject)
+		except Exception as e:
+			msg = 'Error: running or processing CD-HIT clustering. Exiting ...'
+			sys.stderr.write(msg + '\n')
+			logObject.error(msg)
+			sys.stderr.write(traceback.format_exc() + '\n')
+			logObject.error(traceback.format_exc())
+			sys.exit(1)
 
 	rep_genomes = set([])
 	# Perform representative genome selection procedure
