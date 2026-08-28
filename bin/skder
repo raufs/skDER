@@ -486,7 +486,7 @@ def skder_main():
 				if selection_mode == 'low_mem_greedy':
 					cluster_dir = outdir + 'skani_dist_Workspace/'
 					util.setupDirectories([cluster_dir])
-					skani_result_file = 'Skani_Dist_Output.txt'
+					skani_result_file = cluster_dir + 'Skani_Dist_Output.txt'
 					skder.runSkaniDist(cluster_dir, skder_result_file, all_genomes_listing_file, skani_result_file, 
 									   skani_triangle_parameters, aligned_fraction_cutoff, selection_mode, test_cutoffs_flag, 
 									   logObject, threads=threads)
