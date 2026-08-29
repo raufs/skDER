@@ -314,6 +314,12 @@ def processInputProteomes(proteomes, combined_proteome_faa, genome_to_path, logO
 					logObject.warning(msg)
 					continue 
 				
+				if fasta_headers_have_pipe(proteome_file, allow_gzipped=allow_gzipped):
+					msg = 'Warning: proteome %s has one or more FASTA headers containing the "|" character, which is used internally by cidder as a delimiter and would corrupt downstream results. Please rename the offending header(s) to remove "|" characters. Skipping ...' % proteome_file
+					sys.stderr.write(msg + '\n')
+					logObject.warning(msg)
+					continue
+
 				if sanity_check:
 					try:
 						assert (is_fasta(proteome_file))
@@ -363,6 +369,12 @@ def processInputProteomes(proteomes, combined_proteome_faa, genome_to_path, logO
 				logObject.warning(msg)
 				continue 
 			
+			if fasta_headers_have_pipe(proteome_file, allow_gzipped=allow_gzipped):
+				msg = 'Warning: proteome %s has one or more FASTA headers containing the "|" character, which is used internally by cidder as a delimiter and would corrupt downstream results. Please rename the offending header(s) to remove "|" characters. Skipping ...' % proteome_file
+				sys.stderr.write(msg + '\n')
+				logObject.warning(msg)
+				continue
+
 			if sanity_check:
 				try:
 					assert (is_fasta(proteome_file))
@@ -393,7 +405,7 @@ def processInputProteomes(proteomes, combined_proteome_faa, genome_to_path, logO
 	combined_proteome_handle.close()
 	return proteome_name_to_path
 
-def processInputGenomes(genomes, genome_listing_file, logObject, sanity_check=False, allow_gzipped=True):
+def processInputGenomes(genomes, genome_listing_file, logObject, sanity_check=False, allow_gzipped=True, check_header_pipes=False):
 	gf_listing_handle = open(genome_listing_file, 'a+')
 	for g in genomes:
 		g_path = os.path.abspath(g)
@@ -412,6 +424,12 @@ def processInputGenomes(genomes, genome_listing_file, logObject, sanity_check=Fa
 					assert (suffix in ACCEPTED_FASTA_SUFFICES)
 				except:
 					msg = 'Warning: genome %s does not have a valid FASTA suffix. Skipping ...' % genome_file
+					sys.stderr.write(msg + '\n')
+					logObject.warning(msg)
+					continue
+
+				if check_header_pipes and fasta_headers_have_pipe(genome_file, allow_gzipped=allow_gzipped):
+					msg = 'Warning: genome %s has one or more FASTA headers containing the "|" character, which is used internally by cidder as a delimiter and would corrupt downstream results. Please rename the offending header(s) to remove "|" characters. Skipping ...' % genome_file
 					sys.stderr.write(msg + '\n')
 					logObject.warning(msg)
 					continue
@@ -441,6 +459,12 @@ def processInputGenomes(genomes, genome_listing_file, logObject, sanity_check=Fa
 				assert (suffix in ACCEPTED_FASTA_SUFFICES)
 			except:
 				msg = 'Warning: genome %s does not have a valid FASTA suffix. Skipping ...' % genome_file
+				sys.stderr.write(msg + '\n')
+				logObject.warning(msg)
+				continue
+
+			if check_header_pipes and fasta_headers_have_pipe(genome_file, allow_gzipped=allow_gzipped):
+				msg = 'Warning: genome %s has one or more FASTA headers containing the "|" character, which is used internally by cidder as a delimiter and would corrupt downstream results. Please rename the offending header(s) to remove "|" characters. Skipping ...' % genome_file
 				sys.stderr.write(msg + '\n')
 				logObject.warning(msg)
 				continue
@@ -897,6 +921,29 @@ def is_fasta(fasta):
 			with open(fasta) as of:
 				SeqIO.parse(of, 'fasta')
 		return True
+	except:
+		return False
+
+def fasta_headers_have_pipe(fasta, allow_gzipped=True):
+	"""
+	Function to check whether any FASTA header identifier (the token up to the
+	first whitespace) contains a "|" character. cidder uses "|" internally to
+	join genome/proteome names with record identifiers, so a "|" already
+	present in an input header would be split at the wrong position and
+	corrupt genome-to-sequence attribution downstream.
+	"""
+	try:
+		if fasta.endswith('.gz') and allow_gzipped:
+			ofh = gzip.open(fasta, 'rt')
+		else:
+			ofh = open(fasta)
+		with ofh as of:
+			for line in of:
+				if line.startswith('>'):
+					identifier = line[1:].strip().split()[0]
+					if '|' in identifier:
+						return True
+		return False
 	except:
 		return False
 
