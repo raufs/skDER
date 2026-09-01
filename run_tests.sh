@@ -5,17 +5,22 @@ rm -rf test_case/
 tar -zxvf test_case.tar.gz
 cd test_case/
 
-# run skder on test set of Cutibacterium granulosum genomes present from GTDB release 214.
+# run skder on test set of Cutibacterium granulosum genomes from GTDB release 214.
 skder -g Cutibacterium_granulosum_Genomes_in_GTDB_R214/ -o skder_results/ -c 4 -n -i 99.0
 
 printf "\n##############################################\n\n"
 
+# run skder on test set of Cutibacterium granulosum genomes from the latest GTDB release 
+# that is supported.
 skder -t "Cutibacterium granulosum" -o skder_gtdb_results/ -c 4 -auto -s -tc
 
 printf "\n##############################################\n\n"
 
+# run cidder on test set of Cutibacterium granulosum genomes from the latest GTDB release
 cidder -g Cutibacterium_granulosum_Genomes_in_GTDB_R214/*.fna -o cidder_results/ -c 4 -n -ns
 
 printf "\n##############################################\n\n"
 
+# run skder on test set of Cutibacterium granulosum genomes from the latest GTDB release 
+# that is supported using low_mem_greedy mode.
 skder -t "Cutibacterium granulosum" -o skder_gtdb_low_mem_results/ -c 4 -d low_mem_greedy -auto
