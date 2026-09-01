@@ -5,8 +5,8 @@ rm -rf test_case/
 tar -zxvf test_case.tar.gz
 cd test_case/
 
-# run skder on test set of Cutibacterium granulosum genomes present from the latest GTDB release.
-skder -g Cutibacterium_granulosum_Genomes/ -o skder_results/ -c 4 -n -i 99.0
+# run skder on test set of Cutibacterium granulosum genomes present from GTDB release 214.
+skder -g Cutibacterium_granulosum_Genomes_in_GTDB_R214/ -o skder_results/ -c 4 -n -i 99.0
 
 printf "\n##############################################\n\n"
 
