@@ -7,7 +7,8 @@
 
 skDER (& CIDDER): efficient & high-resolution dereplication of microbial genomes to select representatives.
 
-> ***Warning:*** Please make sure to use version 1.0.7 or greater to avoid a bug in previous versions!
+> [!WARNING] 
+Please make sure to use version 1.0.7 or greater to avoid a bug in previous versions! For the dynamic algorithm, we also had a signficant bug prior to v1.3.9.
 
 **Contents**
 

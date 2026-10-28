@@ -130,7 +130,7 @@ int main (int argc, char* argv[]) {
                 }
             }
         } else {
-  	        cout << "ERROR: Unable to open file " + (string)argv[1] << endl;
+  	        cout << "ERROR: Unable to open file " + (string)argv[2] << endl;
         }
         input_file.close();
 
@@ -168,12 +168,12 @@ int main (int argc, char* argv[]) {
                     }
                     if ((ani >= min_ani) && (af_query >= min_af || af_subject >=  min_af)) {
                         delta_af = af_query - af_subject;
-                        if (delta_af <= max_af_difference) {
-                            if (af_query > af_subject) {
-                                redundancy_set.insert(query);
-                            } else {
-                                redundancy_set.insert(subject);
-                            }
+                        if (delta_af > max_af_difference) {
+                            // query is largely contained within subject
+                            redundancy_set.insert(query);
+                        } else if (-delta_af > max_af_difference) {
+                            // subject is largely contained within query
+                            redundancy_set.insert(subject);
                         } else {
                             query_score = (double)n50_dictionary[query]*(double)connectivity_dictionary[query];
                             subject_score = (double)n50_dictionary[subject]*(double)connectivity_dictionary[subject];
@@ -211,11 +211,11 @@ int main (int argc, char* argv[]) {
                     if (!redundancy_set.count(sample)) {
                         cout << sample << endl;
                     }
-		  
+
                 }
             }
         } else {
-  	        cout << "ERROR: Unable to open file " + (string)argv[1] << endl;
+  	        cout << "ERROR: Unable to open file " + (string)argv[2] << endl;
         }
         input_file.close();
 

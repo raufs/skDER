@@ -123,8 +123,8 @@ def lowMemGreedyDerep(all_genomes_listing_file, skder_lm_workspace, concat_n50_r
 			for i, line in enumerate(ossr):
 				if i == 0: continue
 				line = line.strip()
-				# Ref_file	Query_file	ANI	Align_fraction_query	Align_fraction_reference	Ref_name	Query_name
-				ref_file, query_file, ani, align_frac_query, align_frac_ref, ref_name, query_name = line.split('\t')
+				# Ref_file	Query_file	ANI	Align_fraction_ref	Align_fraction_query	Ref_name	Query_name
+				ref_file, query_file, ani, align_frac_ref, align_frac_query, ref_name, query_name = line.split('\t')
 				if float(ani) >= ani_cutoff and float(align_frac_ref) >= af_cutoff:
 					accounted_genomes.add(ref_file)
 		name = gn[0]
@@ -143,7 +143,7 @@ def greedyDerep(skani_result_file, concat_n50_result_file, skder_result_file, ou
 	util.runCmd(skder_sum_cmd, logObject, check_files=[genome_summary_file])
 
 	sorted_genome_summary_file = outdir + 'Genome_Information_for_Greedy_Clustering.sorted.txt'
-	sort_cmd = ['sort', '-k', '2', '--parallel=' + str(threads), '-gr', genome_summary_file, '>', sorted_genome_summary_file]
+	sort_cmd = ['sort', "-t$'\\t'", '-k2,2gr', '--parallel=' + str(threads), genome_summary_file, '>', sorted_genome_summary_file]
 	util.runCmd(sort_cmd, logObject, check_files=[sorted_genome_summary_file])
 
 	# greedy clustering

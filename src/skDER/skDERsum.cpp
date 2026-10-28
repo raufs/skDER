@@ -11,6 +11,7 @@ DESCRIPTION - Program in skDER to get information for greedy clustering.
 #include <fstream>
 #include <string>
 #include <sstream>
+#include <iomanip>
 #include <vector>
 #include <set>
 #include <map>
@@ -53,7 +54,7 @@ vector<string> split (string s, string delimiter) {
 string doubleToString(double val) {
 	string result;
 	ostringstream convertd;
-	convertd << val;
+	convertd << fixed << setprecision(1) << val;
 	result = convertd.str();
 	return result;
 }
@@ -163,7 +164,7 @@ int main (int argc, char* argv[]) {
 		        }
             }
         } else {
-  	        cout << "ERROR: Unable to open file " + (string)argv[1] << endl;
+  	        cout << "ERROR: Unable to open file " + (string)argv[2] << endl;
         }
         input_file.close();
 
