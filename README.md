@@ -8,7 +8,7 @@
 skDER (& CIDDER): efficient & high-resolution dereplication of microbial genomes to select representatives.
 
 > [!WARNING]
-> Please make sure to use version 1.0.7 or greater to avoid a bug in previous versions! For the `dynamic` algorithm and the `low_mem_greedy` mode, significant bugs were also fixed in v1.3.9. We provide an updated benchmarking, similar to what we performed for the manuscript, on this [wiki page](https://github.com/raufs/skDER/wiki/Benchmarking-skDER-after-updates-in-v1.3.9).
+> Please make sure to use version 1.0.7 or greater to avoid a bug in previous versions! For the `dynamic` algorithm, a significant bug was fixed in v1.3.9. We provide an updated benchmarking, similar to what we performed for the manuscript, on this [wiki page](https://github.com/raufs/skDER/wiki/Benchmarking-skDER-after-updates-in-v1.3.9).
 
 **Contents**
 
