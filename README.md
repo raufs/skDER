@@ -7,8 +7,8 @@
 
 skDER (& CIDDER): efficient & high-resolution dereplication of microbial genomes to select representatives.
 
-> [!WARNING] 
-Please make sure to use version 1.0.7 or greater to avoid a bug in previous versions! For the dynamic algorithm, we also had a significant bug prior to v1.3.9.
+> [!WARNING]
+> Please make sure to use version 1.0.7 or greater to avoid a bug in previous versions! For the `dynamic` algorithm and the `low_mem_greedy` mode, significant bugs were also fixed in v1.3.9. We provide an updated benchmarking, similar to what we performed for the manuscript, on this [wiki page](https://github.com/raufs/skDER/wiki/Benchmarking-skDER-after-updates-in-v1.3.9).
 
 **Contents**
 
@@ -22,13 +22,13 @@ Please make sure to use version 1.0.7 or greater to avoid a bug in previous vers
 8. [Citation notice](#citation-notice)
 9. [Representative genomes for select bacterial taxa](https://zenodo.org/records/10041203)
 
-<img src="https://raw.githubusercontent.com/raufs/skDER/main/images/Logo.png" alt="drawing" width="300"/> <img src="https://github.com/raufs/skDER/blob/main/images/Logo2.png" alt="drawing" width="223.5"/> 
+<img src="https://raw.githubusercontent.com/raufs/skDER/main/images/Logo.png" alt="drawing" width="300"/> <img src="https://raw.githubusercontent.com/raufs/skDER/main/images/Logo2.png" alt="drawing" width="223.5"/> 
 
 > [!NOTE]
 > Since v1.3.5, we have used AI to employ supervised fixes and additions of new features.
 
 > [!IMPORTANT] 
-> In v1.3.3, we introduced a `low_mem_greedy` option for low-memory dereplication for the top 20 or so taxa which are particularly well sequenced (e.g. those which have >10k or >20k genomes available). As we showed in the manuscript, while dereplication by skDER/CiDDER or other methods is typically not very memory-intensive when applied to an input set of <5,000 genomes, memory needs can expand when you go beyond this. The `lom_mem_greedy` mode was not included in the manuscript but for stats on how it compares please check out this [wiki page](https://github.com/raufs/skDER/wiki/Benchmarking-skder-low_mem_greedy). The quality of representatives selected were slightly lower and worse, for instance not as many distinct ortholog groups sampled per representative genome selected as the standard `greedy` approach. This is because it does not account for "connectivity" (aka "centrality") in prioritizing their selection, but it is considerably faster and more computationally efficient by leveraging skani's `search` function through a greedy/iterative approach that prioritizes based on only N50. As an example, we were able to dereplicate >20,000 *Staphylococcus* from GTDB R220 in around 2.25 hours using 20 threads and ~1 GB of memory using the command: `skder -t Staphylococcus -d low_mem_greedy -c 20 -r R220 -o Staph_R220_skDER_LMG_Results/ -auto`. For those interested in using this on their laptops, genomes can still add up in size, so make sure you have an appropriate amount of disk space available for the number of genomes you plan to dereplicate.
+> In v1.3.3, we introduced a `low_mem_greedy` option for low-memory dereplication for the top 20 or so taxa which are particularly well sequenced (e.g. those which have >10k or >20k genomes available). As we showed in the manuscript, while dereplication by skDER/CiDDER or other methods is typically not very memory-intensive when applied to an input set of <5,000 genomes, memory needs can expand when you go beyond this. The `low_mem_greedy` mode was not included in the manuscript but for stats on how it compares please check out this [wiki page](https://github.com/raufs/skDER/wiki/Benchmarking-skder-low_mem_greedy). Prior to v1.3.9, `low_mem_greedy` checked the AF of the wrong genome in each pair, which caused larger genomes to be discarded and reduced the diversity of representatives selected. Since the fix, it samples slightly fewer distinct ortholog groups per representative than the standard `greedy` approach, because it does not account for "connectivity" (aka "centrality") when prioritizing representatives, but it typically selects somewhat more representatives and thus captures comparable overall diversity. An updated benchmarking using v1.3.9 is now provided on this [wiki page](https://github.com/raufs/skDER/wiki/Benchmarking-skDER-after-updates-in-v1.3.9). It is also considerably faster and more computationally efficient by leveraging skani's `search` function through a greedy/iterative approach that prioritizes based on only N50. As an example, we were able to dereplicate >20,000 *Staphylococcus* from GTDB R220 in around 2.25 hours using 20 threads and ~1 GB of memory using the command: `skder -t Staphylococcus -d low_mem_greedy -c 20 -r R220 -o Staph_R220_skDER_LMG_Results/ -auto`. For those interested in using this on their laptops, genomes can still add up in size, so make sure you have an appropriate amount of disk space available for the number of genomes you plan to dereplicate.
 
 ## Installation
 
@@ -56,7 +56,7 @@ conda activate skder_env
 ```
 
 > [!TIP]
-> geNomad is actively under development and new databases and versions are being released intermittendly. In the above code, we are suggesting installing v1.8.0 because it has been tested to work with database version 1.5, which we suggest downloading below. These are the versions we used for the skDER/CiDDER manuscript. For the most up to date installation of geNomad and its database possible, please consult its [git repo](https://github.com/apcamargo/genomad.git). *If there are issues with installation, please first try to install geNomad by itself in an individual conda repo. If successful, which suggests the issue is due to conflicts that have risen between geNomad and skDER/CiDDER dependencies, then please just let us know via a GitHub issue and we will attempt to resolve the issue.* 
+> geNomad is actively under development and new databases and versions are being released intermittently. In the above code, we are suggesting installing v1.8.0 because it has been tested to work with database version 1.5, which we suggest downloading below. These are the versions we used for the skDER/CiDDER manuscript. For the most up to date installation of geNomad and its database possible, please consult its [git repo](https://github.com/apcamargo/genomad.git). *If there are issues with installation, please first try to install geNomad by itself in an individual conda repo. If successful, which suggests the issue is due to conflicts that have risen between geNomad and skDER/CiDDER dependencies, then please just let us know via a GitHub issue and we will attempt to resolve the issue.* 
 
 ### Docker 
 
@@ -99,24 +99,27 @@ conda activate skDER_env
 pip install -e .
 ```
 
+> [!NOTE]
+> The `skDERcore` and `skDERsum` programs are compiled from C++ during installation. If you update a manual installation (e.g. via `git pull`), please rerun `pip install -e .` so that these programs are rebuilt - otherwise older versions will continue to be used.
+
 ## Overview
 
 #### skDER 
 
-skDER will perform dereplication of genomes using skani average nucleotide identity (ANI) and aligned fraction (AF) estimates and either a dynamic programming or greedy-based based approach. It assesses such pairwise ANI & AF estimates to determine whether two genomes are similar to each other and then chooses which genome is better suited to serve as a representative based on assembly N50 (favoring the more contiguous assembly) and connectedness (favoring genomes deemed similar to a greater number of alternate genomes). 
+skDER will perform dereplication of genomes using skani average nucleotide identity (ANI) and aligned fraction (AF) estimates and either a dynamic or greedy-based approach. It assesses such pairwise ANI & AF estimates to determine whether two genomes are similar to each other and then chooses which genome is better suited to serve as a representative based on assembly N50 (favoring the more contiguous assembly) and connectedness (favoring genomes deemed similar to a greater number of alternate genomes). 
     
-Compared to [dRep](https://github.com/MrOlm/drep) by [Olm et al. 2017](https://www.nature.com/articles/ismej2017126) and [galah](https://github.com/wwood/galah), skDER does not use a divide-and-conquer approach based on primary clustering with a less-accurate ANI estimator (e.g. MASH or dashing) followed by greedy clustering/dereplication based on more precise ANI estimates (for instance computed using FastANI) in a secondary round. skDER instead leverages advances in accurate yet speedy ANI calculations by [skani](https://github.com/bluenote-1577/skani) by [Shaw and Yu](https://www.nature.com/articles/s41592-023-02018-3) to simply take a "one-round" approach (albeit skani triangle itself uses a preliminary 80% ANI cutoff based on k-mer sketches, which we by default increase to 90% in skDER). skDER is also primarily designed for selecting distinct genomes for a taxonomic group for comparative genomics rather than for metagenomic application. 
+Compared to [dRep](https://github.com/MrOlm/drep) by [Olm et al. 2017](https://www.nature.com/articles/ismej2017126) and [galah](https://github.com/wwood/galah), skDER does not use a divide-and-conquer approach based on primary clustering with a less-accurate ANI estimator (e.g. MASH or dashing) followed by greedy clustering/dereplication based on more precise ANI estimates (for instance computed using FastANI) in a secondary round. skDER instead leverages advances in accurate yet speedy ANI calculations by [skani](https://github.com/bluenote-1577/skani) by [Shaw and Yu](https://www.nature.com/articles/s41592-023-02018-3) to simply take a "one-round" approach (albeit skani triangle itself uses a preliminary 80% ANI cutoff based on k-mer sketches, which we by default increase to 10% below the requested ANI cutoff in skDER - e.g. 89.5% for the default ANI cutoff of 99.5%). skDER is also primarily designed for selecting distinct genomes for a taxonomic group for comparative genomics rather than for metagenomic application. 
 
-skDER, specifically the "dynamic programming" based approach, can still be used for metagenomic applications if users are cautious and filter out MAGs or individual contigs which have high levels of contamination, which can be assessed using [CheckM](https://github.com/chklovski/CheckM2) or [charcoal](https://github.com/dib-lab/charcoal). To support this application with the realization that most MAGs likely suffer from incompleteness, we have introduced a parameter/cutoff for the max alignment fraction  difference for each pair of genomes. For example, if the AF for genome 1 to genome 2 is 95% (95% of genome 1 is contained in  genome 2) and the AF for genome 2 to genome 1 is 80%, then the difference is 15%. Because the default value for the difference cutoff is 10%, in that example the genome with the larger value will automatically be regarded as redundant and become disqualified as a potential representative genome.
+skDER, specifically the "dynamic" approach, can still be used for metagenomic applications if users are cautious and filter out MAGs or individual contigs which have high levels of contamination, which can be assessed using [CheckM](https://github.com/chklovski/CheckM2) or [charcoal](https://github.com/dib-lab/charcoal). To support this application with the realization that most MAGs likely suffer from incompleteness, we have introduced a parameter/cutoff for the max alignment fraction  difference for each pair of genomes. For example, if the AF for genome 1 to genome 2 is 95% (95% of genome 1 is contained in  genome 2) and the AF for genome 2 to genome 1 is 80%, then the difference is 15%. Because the default value for the difference cutoff is 10%, in that example the genome with the larger value will automatically be regarded as redundant and become disqualified as a potential representative genome.
 
 skDER features three distinct algorithms for dereplication (details can be found below):
 
 - **dynamic approach:** approximates selection of a single representative genome per transitive cluster - results in a concise listing of representative genomes - well suited for metagenomic applications.
 - **greedy approach:** performs selection based on greedy set cover type approach - better suited to more comprehensively select representative genomes and sample more of a taxon's pangenome [current default].
-- **greedy low-memory approach:** performs selection iteratively using a greedy set cover type approach where genomes chosen as representatives are prioritized soley based on N50. Should result in lower-quality representative selections compared to the standard greedy mode, which also prioritizes genomes based on connectivity, but should be more more memory-efficient. 
+- **greedy low-memory approach:** performs selection iteratively using a greedy set cover type approach where genomes chosen as representatives are prioritized solely based on N50. Samples slightly fewer distinct ortholog groups per representative than the standard greedy mode, which also prioritizes genomes based on connectivity, but is much more memory-efficient. 
 
 > [!NOTE]
-> The skDER "greedy" algorithm is just referring to the selection algorithm - all vs all assessment is performed using skani triangle still. This is in contrast to dRep or galah where "greedy" is referring to their iterative process of selecting a representative genome followed by targeted ANI asseessment, to avoid all-vs-all comparison, of the genome against related genomes determined from primary, coarser clustering. The info needed for selecting the next representative genome is then known and the process is repeated as many times as needed. While this stratedgy can speed things up when using fastANI, with skani this does not make much of a difference (in applicaiton we found it can be more memory efficient - significantly when dealing with >10k genomes -, but also results in slower speeds than just using skani triangle directly). For memmory efficiency on very large datasets (which should only be relevant for a select set of genera) we thus recently implemented the `low_mem_greedy` approach. 
+> The skDER "greedy" algorithm is just referring to the selection algorithm - all vs all assessment is performed using skani triangle still. This is in contrast to dRep or galah where "greedy" is referring to their iterative process of selecting a representative genome followed by targeted ANI assessment, to avoid all-vs-all comparison, of the genome against related genomes determined from primary, coarser clustering. The info needed for selecting the next representative genome is then known and the process is repeated as many times as needed. While this strategy can speed things up when using fastANI, with skani this does not make much of a difference (in application we found it can be more memory efficient - significantly when dealing with >10k genomes -, but also results in slower speeds than just using skani triangle directly). For memory efficiency on very large datasets (which should only be relevant for a select set of genera) we thus recently implemented the `low_mem_greedy` approach. 
 
 #### CiDDER
 
@@ -128,20 +131,20 @@ If providing genomes in FASTA format, this method will use pyrodigal for gene ca
 
 ### Using Pan-Genome Saturation (CiDDER)
 
-Starting in v1.2.0, CiDDER was introduced to allow representative genome selection based on pan-genome saturation estimates using CD-HIT. After inferring ORFs using pyrodigal, predicted protein sequences are conatenated into a giant FASTA file and clustered using CD-HIT (where parameters are possible to adjust). Each genome is thus treated as a set of distinct protein clusters it features. 
+Starting in v1.2.0, CiDDER was introduced to allow representative genome selection based on pan-genome saturation estimates using CD-HIT. After inferring ORFs using pyrodigal, predicted protein sequences are concatenated into a giant FASTA file and clustered using CD-HIT (where parameters are possible to adjust). Since v1.3.7, diamond linclust can alternatively be used for protein clustering via the `--clustering-method` argument. Each genome is thus treated as a set of distinct protein clusters it features. 
 
 Here is an overview of the algorithm:
 
 >- Download or process input genomes.
 >- Predict proteins using pyrodigal.
->- Comprehensive clustering of all proteins using CD-HIT 
+>- Comprehensive clustering of all proteins using CD-HIT (or diamond linclust if requested)
 >- Select genome with the most number of distinct protein clusters as the initial representative.
 >- Iteratively add more representative genomes one at a time, selecting the next based on maximized addition of novel protein clusters to the current representative set.
->- End addition of representative genomes if one of three criteria are met: (i) Next genome adds less than X number of distinct protein clusters (X is by default 0), (ii) over Y% of the total distinct protein clusters across all genomes are found in the so-far selected reprsentative genomes (Y is by default 90%), or (iii) over Z% of the total distinct multi-genome protein clusters across all genomes are found in the so-far selected representative genomes (Z is by default 100%). Thus, by default, only Y is used for representative genome selection. 
+>- End addition of representative genomes if one of three criteria are met: (i) Next genome adds less than X number of distinct protein clusters (X is by default 0), (ii) over Y% of the total distinct protein clusters across all genomes are found in the so-far selected representative genomes (Y is by default 90%), or (iii) over Z% of the total distinct multi-genome protein clusters across all genomes are found in the so-far selected representative genomes (Z is by default 100%). Thus, by default, only Y is used for representative genome selection. 
 
-### Using the Dynamic Programming Dereplication Approach (skDER)
+### Using the Dynamic Dereplication Approach (skDER)
 
-The dynamic dereplication method in skDER approximates selection of a single representative for coarser clusters of geneomes using a dynamic programming approach in which a set of genomes deemed as redundant is kept track of, avoiding the need to actually cluster genomes. 
+The dynamic dereplication method in skDER approximates selection of a single representative for coarser clusters of genomes using an approach in which a set of genomes deemed as redundant is kept track of, avoiding the need to actually cluster genomes. 
 
 Here is an overview of the algorithm:
 
@@ -150,10 +153,10 @@ Here is an overview of the algorithm:
 >- Compute ANI and AF using `skani triangle` to get a tsv "edge listing" between pairs of genomes (with filters applied based on ANI and AF cutoffs).
 >- Run through "edge listing" tsv on first pass and compute connectivity (_C_[g]) for each genome - how many other genomes it is similar to at a certain threshold.
 >- Run through "N50" tsv and store information.
->- Second pass through "edge listing" tsv and assess each pair one at a time keeping track of a singular set of genomes regarded as redudnant:
->    - if (_AF_[g_1] - _AF_[g_2]) >= parameter `--max_af_distance_cutoff` (default of 10%), then automatically regard corresponding genome of max(_AF_[g_1], _AF_[g_2]) as redundant.
+>- Second pass through "edge listing" tsv and assess each pair, sharing an ANI greater than the `--percent-identity-cutoff` and where at least one genome has an AF greater than the `--aligned-fraction-cutoff`, one at a time keeping track of a singular set of genomes regarded as redundant:
+>    - if |_AF_[g_1] - _AF_[g_2]| > parameter `--max-af-distance-cutoff` (default of 10%), then automatically regard corresponding genome of max(_AF_[g_1], _AF_[g_2]) as redundant.
 >    - else calculate the following score for each genome: _N50_[g]*_C_[g] = _S_[g] and regard corresponding genome for min(_S_[g1], _S_[g2]) as redundant.
->- Second pass through "N50" tsv file and record genome identifier if they were never deemed redudant.
+>- Second pass through "N50" tsv file and record genome identifier if they were never deemed redundant.
     
 ### Using the Greedy Dereplication Approach (skDER)
 
@@ -165,13 +168,13 @@ Here is an overview of this alternate approach:
 >- Compute and create a tsv linking each genome to their N50 assembly quality metric (_N50_[g]). 
 >- Compute ANI and AF using `skani triangle` to get a tsv "edge listing" between pairs of genomes (with filters applied based on ANI and AF cutoffs).
 >- Run through "edge listing" tsv on first pass and compute connectivity (_C_[g]) for each genome - how many other genomes it is similar to at a certain threshold 
->     - Only consider a genome as connected to a focal genome if they share an ANI greater than the `--percent_identity_cutoff` (default of 99%) and the comparing genome exhibits an AF greater than the `--aligned_fraction_cutoff` (default of 90%) to the focal genome (is sufficiently representative of both the core and auxiliary content of the focal genome).
+>     - Only consider a genome as connected to a focal genome if they share an ANI greater than the `--percent-identity-cutoff` (default of 99.5%) and the comparing genome exhibits an AF greater than the `--aligned-fraction-cutoff` (default of 50%) to the focal genome (i.e. the comparing genome is largely contained within, and thus sufficiently represented by, the focal genome).
 >- Run through "N50" tsv and compute the score for each genome: _N50_[g]*_C_[g] = _S_[g] and write to new tsv where each line corresponds to a single genome, the second column corresponds to the S[g] computed, and the third column to connected genomes to the focal genome. 
 >- Sort resulting tsv file based on _S_[g] in descending order and use a greedy approach to select representative genomes if they have not been accounted for as a connected genome from an already selected representative genome with a higher score.
 
 ### Using the Low-Memory Greedy Dereplication Approach (skDER)
 
-Starting from v1.3.3, skDER also allows users to request `low_mem_greedy` clustering instead. This generally leads to a larger, more-comprehensive selection of representative genomes that covers more of the pan-genome. Note, if a secondary clustering is envoked this will end up running `skani dist` between representative and non-representative genomes which will require more memory than simply using `skani search`. 
+Starting from v1.3.3, skDER also allows users to request `low_mem_greedy` clustering instead. Rather than computing all-vs-all ANI with `skani triangle`, it iteratively uses `skani search` to compare each selected representative against the remaining genomes, and prioritizes representatives based solely on N50, which greatly reduces memory usage for very large datasets. Note, if a secondary clustering is invoked this will end up running `skani dist` between representative and non-representative genomes which will require more memory than simply using `skani search`. 
 
 Here is an overview of this alternate approach:
 
@@ -179,7 +182,7 @@ Here is an overview of this alternate approach:
 >- Compute and create a tsv linking each genome to their N50 assembly quality metric (_N50_[g]). 
 >- Create a sketch of all the genomes using `skani sketch`.
 >- Select the genome with the largest _N50_[g] to be the first representative and use `skani search` to query the selected genome against all others (in the sketch database).
->- For each matching genome only consider it as connected to the focal genome if they share an ANI greater than the `--percent_identity_cutoff` (default of 99%) and the comparing genome exhibits an AF greater than the `--aligned_fraction_cutoff` (default of 90%) to the focal genome (is sufficiently representative of both the core and auxiliary content of the focal genome). Add such genomes to a set of redundant genomes that are already accounted for by the selected representative genome.
+>- For each matching genome only consider it as connected to the focal genome if they share an ANI greater than the `--percent-identity-cutoff` (default of 99.5%) and the comparing genome exhibits an AF greater than the `--aligned-fraction-cutoff` (default of 50%) to the focal genome (i.e. the comparing genome is largely contained within, and thus sufficiently represented by, the focal genome). Add such genomes to a set of redundant genomes that are already accounted for by the selected representative genome.
 >- Continue this process for the next representative genome, highest N50 genome that has not been regarded as redundant and continue until all genomes are either representatives or deemed redundant. 
 
 ## Test Case
@@ -222,8 +225,8 @@ usage: skder [-h] [-g GENOMES [GENOMES ...]] [-t TAXA_NAME] -o OUTPUT_DIRECTORY 
 	representative genomes.
 
 	skDER will perform dereplication of genomes using skani average nucleotide identity
-	(ANI) and aligned fraction (AF) estimates and either a dynamic programming or
-	greedy-based based approach. It assesses such pairwise ANI & AF estimates to determine
+	(ANI) and aligned fraction (AF) estimates and either a dynamic or
+	greedy-based approach. It assesses such pairwise ANI & AF estimates to determine
 	whether two genomes are similar to each other and then chooses which genome is better
 	suited to serve as a representative based on assembly N50 (favoring the more contiguous
 	assembly) and connectedness (favoring genomes deemed similar to a greater number of
@@ -242,8 +245,8 @@ usage: skder [-h] [-g GENOMES [GENOMES ...]] [-t TAXA_NAME] -o OUTPUT_DIRECTORY 
 
 	and
 
-	skDER & CiDDER: two scalable approaches for microbial dereplication. Microbial
-	Genomics. Salamzade, Kottapalli, and Kalan, 2025.
+	skDER and CiDDER: two scalable approaches for microbial genome dereplication.
+	Microbial Genomics. Salamzade, Kottapalli, and Kalan, 2025.
 
 
 options:
@@ -261,18 +264,20 @@ options:
                         Output directory.
   -d DEREPLICATION_MODE, --dereplication-mode DEREPLICATION_MODE
                         Whether to use a "dynamic" (more concise), "greedy" (more
-                        comprehensive), or "low_mem_greedy" (currently
-                        experimental) approach to selecting representative genomes.
+                        comprehensive), or "low_mem_greedy" (more
+                        memory-efficient) approach to selecting representative genomes.
                         [Default is "greedy"]
   -i PERCENT_IDENTITY_CUTOFF, --percent-identity-cutoff PERCENT_IDENTITY_CUTOFF
                         ANI cutoff for dereplication [Default is 99.5].
   -f ALIGNED_FRACTION_CUTOFF, --aligned-fraction-cutoff ALIGNED_FRACTION_CUTOFF
                         Aligned cutoff threshold for dereplication - only needed by
-                        one genome [Default is 50.0].
+                        one genome; in greedy modes, it must be met by the
+                        non-representative genome [Default is 50.0].
   -a MAX_AF_DISTANCE_CUTOFF, --max-af-distance-cutoff MAX_AF_DISTANCE_CUTOFF
                         Maximum difference for aligned fraction between a pair to
                         automatically disqualify the genome with a higher
-                        AF from being a representative [Default is 10.0].
+                        AF from being a representative (dynamic mode only)
+                        [Default is 10.0].
   -tc, --test-cutoffs   Assess clustering using various pre-selected cutoffs.
   -p SKANI_TRIANGLE_PARAMETERS, --skani-triangle-parameters SKANI_TRIANGLE_PARAMETERS
                         Options for skani triangle. Note ANI and AF cutoffs
@@ -307,7 +312,7 @@ options:
   -r GTDB_RELEASE, --gtdb-release GTDB_RELEASE
                         Which GTDB release to use if -t argument issued [Default is R232].
   -auto, --automate     Automatically skip warnings and download genomes from NCBI if -t
-                        argument issued. Automatation off by default to prevent
+                        argument issued. Automation off by default to prevent
                         unexpected downloading of large genomes [Default
                         is False].
   -mm MAX_MEMORY, --max-memory MAX_MEMORY
@@ -328,7 +333,7 @@ The help function should return the following:
 
 ```
 usage: cidder [-h] [-g GENOMES [GENOMES ...]] [-p PROTEOMES [PROTEOMES ...]] [-t TAXA_NAME] [-a NEW_PROTEINS_NEEDED] [-ts TOTAL_SATURATION] [-mgs MULTI_GENOME_SATURATION] [-rs REQUIRE_SIMILARITY] -o
-              OUTPUT_DIRECTORY [-cdp CD_HIT_PARAMS] [-mg] [-e] [-s] [-fm] [-fms FILTER_MGE_SKIP_REGIONS] [-gd GENOMAD_DATABASE] [-n] [-ns] [-mn MINIMAL_N50] [-l] [-r GTDB_RELEASE] [-auto] [-c THREADS]
+              OUTPUT_DIRECTORY [-cm {cd-hit,diamond}] [-cdp CD_HIT_PARAMS] [-dlp DIAMOND_LINCLUST_PARAMS] [-mg] [-e] [-s] [-fm] [-fms FILTER_MGE_SKIP_REGIONS] [-gd GENOMAD_DATABASE] [-n] [-ns] [-mn MINIMAL_N50] [-l] [-r GTDB_RELEASE] [-auto] [-c THREADS]
               [-mm MAX_MEMORY] [-v]
 
 	Program: cidder
@@ -338,12 +343,13 @@ usage: cidder [-h] [-g GENOMES [GENOMES ...]] [-p PROTEOMES [PROTEOMES ...]] [-t
 	CiDDER: Performs genome dereplication based on CD-HIT clustering of proteins to
 	select a representative set of genomes which adequately samples the
 	pangenome space. Because gene prediction is performed using pyrodigal,
-	geneder only works for bacterial genomes at the moment.
+	CiDDER only works for bacterial genomes at the moment if genomes are
+	provided; proteomes can be provided for other organisms.
 
 	The general algorithm is to first select the genome with the most number of distinct
 	open-reading-frames (ORFS; predicted genes) and then iteratively add genomes based on
 	which maximizes the number of new ORFs. This iterative addition of selected genomes
-	is performed until: (i) the next genome to add does not have a minimum of X new disintct
+	is performed until: (i) the next genome to add does not have a minimum of X new distinct
 	ORFs to add to the set of ORFs belonging, (ii) some percentage Y of the total distinct
 	ORFs are found to have been sampled, or (iii) some percentage Z of the total multi-genome
 	distinct ORFs are found to have been sampled. The "added-on" genomes from the iterative
@@ -352,10 +358,15 @@ usage: cidder [-h] [-g GENOMES [GENOMES ...]] [-p PROTEOMES [PROTEOMES ...]] [-t
 	For information on how to alter CD-HIT parameters, please see:
 	https://github.com/weizhongli/cdhit/blob/master/doc/cdhit-user-guide.wiki#cd-hit
 
+	Alternatively, protein clustering can be performed using diamond linclust instead of
+	CD-HIT via the --clustering-method argument. For information on how to alter diamond
+	linclust parameters, please see:
+	https://github.com/bbuchfink/diamond/wiki/Clustering
+
 	Note, if --filter-mge is requested, the statistics reported in clustering reports (number
 	of proteins overlapping, ANI) in the clustering reports will all be based on processed
 	(MGE filtered) genomes. However, the final representative genomes in the
-	Dereplicated_Representative_Genomes/ folder will be the original unprocesed genomes.
+	Dereplicated_Representative_Genomes/ folder will be the original unprocessed genomes.
 
 	If you use CiDDER for your research, please kindly cite both:
 
@@ -364,8 +375,13 @@ usage: cidder [-h] [-g GENOMES [GENOMES ...]] [-p PROTEOMES [PROTEOMES ...]] [-t
 
 	and
 
-	skDER & CiDDER: microbial genome dereplication approaches for comparative genomic and
-	metagenomic applications. Salamzade, Kottapalli, and Kalan, 2025.
+	skDER and CiDDER: two scalable approaches for microbial genome dereplication.
+	Microbial Genomics. Salamzade, Kottapalli, and Kalan, 2025.
+
+	If you use the --clustering-method diamond option, please also kindly cite:
+
+	Sensitive protein alignments at tree-of-life scale using DIAMOND. Nature Methods.
+	Buchfink, Reuter, and Drost, 2021.
 
 
 options:
@@ -395,10 +411,19 @@ options:
                         clusters represented by an individual representative genome [Default is 0.0].
   -o OUTPUT_DIRECTORY, --output-directory OUTPUT_DIRECTORY
                         Output directory.
+  -cm {cd-hit,diamond}, --clustering-method {cd-hit,diamond}
+                        Method to use for clustering proteins into ortholog/protein
+                        clusters: 'cd-hit' or 'diamond' (uses diamond linclust)
+                        [Default is cd-hit].
   -cdp CD_HIT_PARAMS, --cd-hit-params CD_HIT_PARAMS
                         CD-HIT parameters to use for clustering proteins - select carefully
                         (don't set threads or memory - those are done by default in cidder) and
                         surround by quotes [Default is: "-n 5 -c 0.95 -aL 0.75 -aS 0.90"]
+  -dlp DIAMOND_LINCLUST_PARAMS, --diamond-linclust-params DIAMOND_LINCLUST_PARAMS
+                        Diamond linclust parameters to use for clustering proteins - select
+                        carefully (don't set threads or memory - those are done by default
+                        in cidder) and surround by quotes [Default is: "--approx-id 95
+                        --member-cover 90"]
   -mg, --metagenome-mode
                         Run pyrodigal using metagenome mode.
   -e, --include-edge-orfs
@@ -436,7 +461,7 @@ options:
   -r GTDB_RELEASE, --gtdb-release GTDB_RELEASE
                         Which GTDB release to use if -t argument issued [Default is R232].
   -auto, --automate     Automatically skip warnings and download genomes from NCBI if -t
-                        argument issued. Automatation off by default to prevent
+                        argument issued. Automation off by default to prevent
                         unexpected downloading of large genomes [Default
                         is False].
   -c THREADS, --threads THREADS
@@ -456,15 +481,17 @@ as well as the skDER manuscript:
 
 > [skDER and CiDDER: two scalable approaches for microbial genome dereplication](https://www.microbiologyresearch.org/content/journal/mgen/10.1099/mgen.0.001438)
 
-If you use the option to downlod genomes for a taxonomy based on GTDB classifications, please also cite:
+If you use the option to download genomes for a taxonomy based on GTDB classifications, please also cite:
 
 > [GTDB: an ongoing census of bacterial and archaeal diversity through a phylogenetically consistent, rank normalized and complete genome-based taxonomy](https://academic.oup.com/nar/article/50/D1/D785/6370255)
 
-If you use CiDDER, please also consider citing pyrodigal (for gene-calling) and CD-HIT (for protein clustering):
+If you use CiDDER, please also consider citing pyrodigal (for gene-calling) and CD-HIT or DIAMOND (for protein clustering):
 
 > [CD-HIT: accelerated for clustering the next-generation sequencing data](https://academic.oup.com/bioinformatics/article/28/23/3150/192160)
 
 > [Pyrodigal: Python bindings and interface to Prodigal, an efficient method for gene prediction in prokaryotes](https://joss.theoj.org/papers/10.21105/joss.04296)
+
+> [Sensitive protein alignments at tree-of-life scale using DIAMOND](https://www.nature.com/articles/s41592-021-01101-x)
 
 If you use mgecut (for removal of predicted MGEs) then please cite either PhiSpy (default) or geNomad for their annotation:
 

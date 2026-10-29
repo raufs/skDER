@@ -59,12 +59,13 @@ def create_parser():
 	CiDDER: Performs genome dereplication based on CD-HIT clustering of proteins to 
 			select a representative set of genomes which adequately samples the 
 			pangenome space. Because gene prediction is performed using pyrodigal, 
-			geneder only works for bacterial genomes at the moment. 
+			CiDDER only works for bacterial genomes at the moment if genomes are
+			provided; proteomes can be provided for other organisms. 
 								  
 	The general algorithm is to first select the genome with the most number of distinct 
 	open-reading-frames (ORFS; predicted genes) and then iteratively add genomes based on 
 	which maximizes the number of new ORFs. This iterative addition of selected genomes
-	is performed until: (i) the next genome to add does not have a minimum of X new disintct 
+	is performed until: (i) the next genome to add does not have a minimum of X new distinct 
 	ORFs to add to the set of ORFs belonging, (ii) some percentage Y of the total distinct 
 	ORFs are found to have been sampled, or (iii) some percentage Z of the total multi-genome
 	distinct ORFs are found to have been sampled. The "added-on" genomes from the iterative 
@@ -81,7 +82,7 @@ def create_parser():
 	Note, if --filter-mge is requested, the statistics reported in clustering reports (number 
 	of proteins overlapping, ANI) in the clustering reports will all be based on processed 
 	(MGE filtered) genomes. However, the final representative genomes in the 
-	Dereplicated_Representative_Genomes/ folder will be the original unprocesed genomes.
+	Dereplicated_Representative_Genomes/ folder will be the original unprocessed genomes.
 
 	If you use CiDDER for your research, please kindly cite both:
 
@@ -90,8 +91,8 @@ def create_parser():
 
 	and
 
-	skDER & CiDDER: microbial genome dereplication approaches for comparative genomic and
-	metagenomic applications. Salamzade, Kottapalli, and Kalan, 2025.
+	skDER and CiDDER: two scalable approaches for microbial genome dereplication.
+	Microbial Genomics. Salamzade, Kottapalli, and Kalan, 2025.
 
 	If you use the --clustering-method diamond option, please also kindly cite:
 
@@ -121,7 +122,7 @@ def create_parser():
 	parser.add_argument('-mn', '--minimal_n50', type=int, help="Minimal N50 of genomes to be included in dereplication\n[Default is 0].", required=False, default=0)
 	parser.add_argument('-l', '--symlink', action='store_true', help="Symlink representative genomes in results subdirectory\ninstead of performing a copy of the files.", required=False, default=False)
 	parser.add_argument('-r', '--gtdb-release', help='Which GTDB release to use if -t argument issued [Default is R232].', default="R232")
-	parser.add_argument('-auto', '--automate', action='store_true', help="Automatically skip warnings and download genomes from NCBI if -t\nargument issued. Automatation off by default to prevent\nunexpected downloading of large genomes [Default\nis False].", required=False, default=False)
+	parser.add_argument('-auto', '--automate', action='store_true', help="Automatically skip warnings and download genomes from NCBI if -t\nargument issued. Automation off by default to prevent\nunexpected downloading of large genomes [Default\nis False].", required=False, default=False)
 	parser.add_argument('-c', '--threads', type=int, help="Number of threads/processes to use [Default is 1].", required=False, default=1)
 	parser.add_argument('-mm', '--max-memory', type=int, help="Max memory in Gigabytes [Default is 0 = unlimited].", required=False, default=0)
 	parser.add_argument('-v', '--version', action='store_true', help="Report version of CiDDER.", required=False, default=False)

@@ -65,8 +65,8 @@ def create_parser():
 		   representative genomes.
 
 	skDER will perform dereplication of genomes using skani average nucleotide identity 
-	(ANI) and aligned fraction (AF) estimates and either a dynamic programming or 
-	greedy-based based approach. It assesses such pairwise ANI & AF estimates to determine 
+	(ANI) and aligned fraction (AF) estimates and either a dynamic or 
+	greedy-based approach. It assesses such pairwise ANI & AF estimates to determine 
 	whether two genomes are similar to each other and then chooses which genome is better 
 	suited to serve as a representative based on assembly N50 (favoring the more contiguous 
 	assembly) and connectedness (favoring genomes deemed similar to a greater number of 
@@ -85,17 +85,17 @@ def create_parser():
 
 	and
     
-	skDER & CiDDER: two scalable approaches for microbial dereplication. Microbial
-	Genomics. Salamzade, Kottapalli, and Kalan, 2025.
+	skDER and CiDDER: two scalable approaches for microbial genome dereplication.
+	Microbial Genomics. Salamzade, Kottapalli, and Kalan, 2025.
     """, formatter_class=argparse.RawTextHelpFormatter)
 
 	parser.add_argument('-g', '--genomes', nargs='+', help='Genome assembly file paths or paths to containing\ndirectories. Files should be in FASTA format and can be gzipped\n(accepted suffices are: *.fasta,\n*.fa, *.fas, or *.fna) [Optional].', required=False, default=[])
 	parser.add_argument('-t', '--taxa-name', help='Genus or species identifier from GTDB for which to\ndownload genomes for and include in\ndereplication analysis [Optional].', required=False, default=None)
 	parser.add_argument('-o', '--output-directory', help='Output directory.', required=True)
-	parser.add_argument('-d', '--dereplication-mode', help='Whether to use a "dynamic" (more concise), "greedy" (more\ncomprehensive), or "low_mem_greedy" (currently\nexperimental) approach to selecting representative genomes.\n[Default is "greedy"]', required=False, default="greedy")
+	parser.add_argument('-d', '--dereplication-mode', help='Whether to use a "dynamic" (more concise), "greedy" (more\ncomprehensive), or "low_mem_greedy" (more\nmemory-efficient) approach to selecting representative genomes.\n[Default is "greedy"]', required=False, default="greedy")
 	parser.add_argument('-i', '--percent-identity-cutoff', type=float, help="ANI cutoff for dereplication [Default is 99.5].", required=False, default=99.5)
-	parser.add_argument('-f', '--aligned-fraction-cutoff', type=float, help="Aligned cutoff threshold for dereplication - only needed by\none genome [Default is 50.0].", required=False, default=50.0)
-	parser.add_argument('-a', '--max-af-distance-cutoff', type=float, help="Maximum difference for aligned fraction between a pair to\nautomatically disqualify the genome with a higher\nAF from being a representative [Default is 10.0].", required=False, default=10.0)
+	parser.add_argument('-f', '--aligned-fraction-cutoff', type=float, help="Aligned cutoff threshold for dereplication - only needed by\none genome; in greedy modes, it must be met by the\nnon-representative genome [Default is 50.0].", required=False, default=50.0)
+	parser.add_argument('-a', '--max-af-distance-cutoff', type=float, help="Maximum difference for aligned fraction between a pair to\nautomatically disqualify the genome with a higher\nAF from being a representative (dynamic mode only)\n[Default is 10.0].", required=False, default=10.0)
 	parser.add_argument('-tc', '--test-cutoffs', action='store_true', help="Assess clustering using various pre-selected cutoffs.", required=False, default=False)
 	parser.add_argument('-p', '--skani-triangle-parameters', help="Options for skani triangle. Note ANI and AF cutoffs\nare specified separately and the -E parameter is always\nrequested. [Default is \"-s X\", where X is\n10 below the ANI cutoff].", default="-s X", required=False)
 	parser.add_argument('-s', '--sanity-check', action='store_true', help="Confirm each FASTA file provided or downloaded is actually\na FASTA file. Makes it slower, but generally\ngood practice.", required=False, default=False)
@@ -106,7 +106,7 @@ def create_parser():
 	parser.add_argument('-mn', '--minimal_n50', type=int, help="Minimal N50 of genomes to be included in dereplication\n[Default is 0].", required=False, default=0)
 	parser.add_argument('-l', '--symlink', action='store_true', help="Symlink representative genomes in results subdirectory\ninstead of performing a copy of the files.", required=False, default=False)
 	parser.add_argument('-r', '--gtdb-release', help='Which GTDB release to use if -t argument issued [Default is R232].', default="R232")
-	parser.add_argument('-auto', '--automate', action='store_true', help="Automatically skip warnings and download genomes from NCBI if -t\nargument issued. Automatation off by default to prevent\nunexpected downloading of large genomes [Default\nis False].", required=False, default=False)
+	parser.add_argument('-auto', '--automate', action='store_true', help="Automatically skip warnings and download genomes from NCBI if -t\nargument issued. Automation off by default to prevent\nunexpected downloading of large genomes [Default\nis False].", required=False, default=False)
 	parser.add_argument('-mm', '--max-memory', type=int, help="Max memory in Gigabytes [Default is 0 = unlimited].", required=False, default=0)
 	parser.add_argument('-c', '--threads', type=int, help="Number of threads/processes to use [Default is 1].", required=False, default=1)
 	parser.add_argument('-v', '--version', action='store_true', help="Report version of skDER.", required=False, default=False)
